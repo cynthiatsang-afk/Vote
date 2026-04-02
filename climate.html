@@ -3,420 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Climate Analysis Tool - HK</title>
+    <title>香港氣候分析工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f0f4f8;
-            color: #334155;
-            padding: 20px;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            overflow-x: hidden;
         }
 
-        .header-tag {
-            background: #eef2ff;
-            color: #4f46e5;
-            padding: 6px 16px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        /* 角色切換 */
-        .role-toggle {
-            background: #e2e8f0;
-            padding: 4px;
-            border-radius: 12px;
-            display: flex;
-            gap: 4px;
-        }
-        .role-btn {
-            padding: 6px 20px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .role-btn.active { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #1e293b; }
-        .role-btn.inactive { color: #94a3b8; }
-
-        /* 主標題區域 */
-        .title-card {
+        .main-card {
             background: white;
             border-radius: 40px;
-            padding: 60px 40px;
-            text-align: center;
+            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 老師監控面板 */
+        .teacher-monitor {
+            background: #1E293B;
+            border-radius: 30px;
+            padding: 24px;
+            color: white;
             margin-bottom: 24px;
         }
-        .main-title {
-            font-size: 42px;
+
+        /* 各組專屬顏色 */
+        .color-g1 { color: #EF4444; } .bg-g1 { background-color: #EF4444; }
+        .color-g2 { color: #3B82F6; } .bg-g2 { background-color: #3B82F6; }
+        .color-g3 { color: #10B981; } .bg-g3 { background-color: #10B981; }
+        .color-g4 { color: #F59E0B; } .bg-g4 { background-color: #F59E0B; }
+        .color-g5 { color: #8B5CF6; } .bg-g5 { background-color: #8B5CF6; }
+        .color-g6 { color: #06B6D4; } .bg-g6 { background-color: #06B6D4; }
+
+        .progress-bar-bg { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 6px; }
+
+        .year-input-box {
+            border: none;
+            border-bottom: 3px solid #EF4444;
+            width: 90px;
+            background: transparent;
+            color: #EF4444;
+            text-align: center;
             font-weight: 900;
-            color: #1e293b;
-            white-space: nowrap;
+            outline: none;
+            padding: 0;
+            margin: 0 8px;
+            -moz-appearance: textfield;
+        }
+        .year-input-box::-webkit-outer-spin-button,
+        .year-input-box::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .scroll-x-container {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .year-input-wrapper { position: relative; display: inline-block; }
-        .year-input-wrapper input {
-            color: #94a3b8; border: none; width: 130px; text-align: center;
-            background: transparent; outline: none; font-weight: 900;
-            font-size: 42px;
-        }
-        .year-input-line { position: absolute; bottom: 6px; left: 0; width: 100%; height: 4px; background: #ef4444; }
-
-        /* 小組標籤 */
-        .group-container { display: flex; justify-content: center; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
-        .group-btn {
-            background: white; border: 1px solid #f1f5f9; border-radius: 20px;
-            padding: 12px 24px; font-weight: bold; color: #64748b;
-            display: flex; align-items: center; gap: 10px; cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        .group-btn.active {
-            background: #ef4444; color: white; border-color: #ef4444;
-            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
-        }
-        .dot { width: 10px; height: 10px; border-radius: 50%; }
-
-        /* 數據行 */
-        .data-row-card {
-            background: white; border-radius: 30px; padding: 24px 32px;
-            margin-bottom: 16px; display: flex; align-items: center; gap: 24px;
-        }
-        .row-info { display: flex; align-items: center; gap: 16px; min-width: 220px; }
-        .row-label { font-weight: bold; font-size: 18px; }
-        .check-box { 
-            width: 24px; height: 24px; border-radius: 6px; 
-            display: flex; align-items: center; justify-content: center; color: white; cursor: pointer;
-            transition: background 0.2s;
+            overflow-x: auto;
+            gap: 12px;
+            padding-bottom: 12px;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .inputs-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; flex-grow: 1; }
-        .input-item { text-align: center; }
-        .month-label { font-size: 11px; font-weight: bold; margin-bottom: 6px; }
-        .temp-input { 
-            width: 100%; border-radius: 10px; padding: 10px 2px; 
-            text-align: center; font-weight: bold; border: none; outline: none; font-size: 14px; 
+        .scroll-x-container::-webkit-scrollbar { height: 8px; }
+        .scroll-x-container::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 10px; }
+        .scroll-x-container::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+
+        .month-input {
+            width: 65px;
+            height: 45px;
+            background: #F1F5F9;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid transparent;
         }
 
-        /* 老師進度監控 */
-        .teacher-panel {
-            background: #1e293b; color: white; border-radius: 30px; padding: 30px; margin-bottom: 24px;
-            display: none;
-        }
-        .progress-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .progress-card { background: #334155; border-radius: 15px; padding: 15px; display: flex; align-items: center; gap: 15px; }
-        .progress-bar-bg { flex-grow: 1; height: 8px; background: #475569; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; transition: width 0.3s; }
+        .month-input:focus { border-color: #EF4444; background: white; outline: none; }
 
-        /* 密碼彈窗 */
-        #passwordModal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100;
+        .btn-mode-toggle { background: #E2E8F0; padding: 4px; border-radius: 14px; }
+        .btn-mode-toggle button { padding: 6px 20px; border-radius: 10px; font-weight: bold; }
+        .btn-mode-toggle button.active { background: white; color: #1E293B; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        #authModal { display: none; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); }
+
+        .monitor-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: white;
         }
 
-        .chart-card { background: white; border-radius: 40px; padding: 40px; height: 500px; margin-top: 24px; }
+        /* 實心長方格圖示樣式 */
+        .rect-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            display: inline-block;
+        }
     </style>
 </head>
-<body>
+<body class="p-4">
 
-    <!-- 密碼 Modal -->
-    <div id="passwordModal">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-80 text-center">
-            <h3 class="text-xl font-bold mb-4">老師登入</h3>
-            <input type="password" id="pwInput" class="w-full border-2 border-slate-200 rounded-xl p-3 mb-4 outline-none focus:border-indigo-500" placeholder="輸入密碼">
-            <div class="flex gap-2">
-                <button onclick="closeModal()" class="flex-1 bg-slate-100 py-2 rounded-xl font-bold">取消</button>
-                <button onclick="verifyPassword()" class="flex-1 bg-indigo-600 text-white py-2 rounded-xl font-bold">確定</button>
+    <div class="max-w-6xl mx-auto flex justify-between items-center mb-6">
+        <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase">
+            CLIMATE ANALYSIS TOOL
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="btn-mode-toggle flex text-sm">
+                <button id="btnStudent" class="active">學生</button>
+                <button id="btnTeacher">老師 🔒</button>
             </div>
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-6">
-            <div class="header-tag">CLIMATE ANALYSIS TOOL</div>
-            <div class="role-toggle">
-                <button id="btnStudent" class="role-btn active" onclick="switchRole('student')">學生</button>
-                <button id="btnTeacher" class="role-btn inactive" onclick="openPasswordModal()">老師</button>
-            </div>
-        </div>
-
-        <!-- 老師進度監控面板 -->
-        <div id="teacherPanel" class="teacher-panel">
+    <div class="max-w-6xl mx-auto">
+        
+        <!-- Teacher View: Monitoring Panel -->
+        <div id="teacherDashboard" class="hidden teacher-monitor">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold">六組學生進度及數據控制</h2>
-                <div class="text-sm opacity-60">密碼：123456 (已驗證)</div>
+                <h2 class="text-xl font-black">六組學生進度監控與顯示控制</h2>
+                <span class="text-xs opacity-50">勾選以在下方圖表顯示該組數據</span>
             </div>
-            <div class="progress-grid" id="progressGrid"></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <script>
+                    const groupColors = ['bg-g1', 'bg-g2', 'bg-g3', 'bg-g4', 'bg-g5', 'bg-g6'];
+                    for(let i=0; i<6; i++) {
+                        document.write(`
+                            <div class="bg-white/5 p-3 rounded-2xl border border-white/10" id="mon-${i}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="w-8 h-8 rounded-full ${groupColors[i]} flex items-center justify-center text-xs font-bold">G${i+1}</span>
+                                    <input type="checkbox" class="monitor-checkbox" data-group="${i}" id="chk-g${i}">
+                                </div>
+                                <div class="text-[10px] opacity-60 mb-2 g-year-display">無年份</div>
+                                <div class="progress-bar-bg"><div class="h-full rounded-full w-0 ${groupColors[i]} transition-all duration-500"></div></div>
+                            </div>
+                        `);
+                    }
+                </script>
+            </div>
         </div>
 
-        <div class="title-card">
-            <!-- 學生標題 -->
-            <h1 id="studentTitle" class="main-title">
-                <span>2025年與</span>
-                <div class="year-input-wrapper">
-                    <input type="text" id="yearInput" value="____" onfocus="if(this.value=='____')this.value=''" onblur="if(this.value=='')this.value='____'">
-                    <div class="year-input-line"></div>
-                </div>
-                <span>年香港各月溫度變化比較</span>
-            </h1>
-            <!-- 老師標題 -->
-            <h1 id="teacherTitle" class="main-title" style="display: none;">
-                過去30年香港各月溫度的變化
-            </h1>
+        <!-- Main Workspace -->
+        <div class="main-card p-6 md:p-12 text-center">
             
-            <div class="group-container" id="groupTabs"></div>
-        </div>
+            <h1 class="text-2xl md:text-4xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap">
+                <span id="titlePrefix">2025年與</span>
+                <input type="number" id="yearInput" class="year-input-box" placeholder="____" oninput="if(value.length>4)value=value.slice(0,4)">
+                <span id="titleSuffix">年香港各月溫度變化比較</span>
+            </h1>
 
-        <!-- 2025 對照行 -->
-        <div class="data-row-card">
-            <div class="row-info">
-                <div class="check-box bg-slate-400" id="refCheck" onclick="toggleDataset(0)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M20 6L9 17l-5-5"/></svg>
-                </div>
-                <span class="row-label text-slate-400">2025年對照數據</span>
+            <div id="groupButtonsContainer">
+                <div id="groupButtons" class="scroll-x-container justify-start md:justify-center mb-10"></div>
             </div>
-            <div class="inputs-grid" id="refGrid"></div>
-        </div>
 
-        <!-- 輸入行 -->
-        <div class="data-row-card border-2 border-rose-100">
-            <div class="row-info">
-                <div class="check-box bg-rose-500" id="currentGroupCheck" onclick="toggleDataset(1)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M20 6L9 17l-5-5"/></svg>
+            <div id="dataInputArea" class="space-y-4 mb-8 text-left">
+                <!-- 2025年對照組輸入區域 -->
+                <div class="flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-[25px] border border-slate-100">
+                    <div class="flex items-center gap-3 min-w-[160px]">
+                        <span class="rect-icon bg-slate-300"></span> <!-- 改為實心長方格 -->
+                        <span class="text-slate-500 font-black text-base">2025年對照</span>
+                        <input type="checkbox" checked id="toggleRef" class="w-5 h-5 accent-slate-400">
+                    </div>
+                    <div class="flex-1 w-full overflow-hidden">
+                        <div class="scroll-x-container" id="refDataGrid"></div>
+                    </div>
                 </div>
-                <span class="row-label text-rose-500" id="inputRowLabel">____年數據輸入</span>
-            </div>
-            <div class="inputs-grid" id="mainInputGrid"></div>
-        </div>
 
-        <div class="chart-card">
-            <canvas id="mainChart"></canvas>
+                <!-- 學生組別輸入區域 -->
+                <div class="flex flex-col md:flex-row items-center gap-4 bg-red-50 p-4 rounded-[25px] border border-red-100">
+                    <div class="flex items-center gap-3 min-w-[160px]">
+                        <span id="groupRectIcon" class="rect-icon bg-red-500"></span> <!-- 改為實心長方格 -->
+                        <span id="inputLabelYear" class="text-red-500 font-black text-base underline decoration-2">_______年輸入</span>
+                        <input type="checkbox" checked id="toggleUser" class="w-5 h-5 accent-red-500">
+                    </div>
+                    <div class="flex-1 w-full overflow-hidden">
+                        <div class="scroll-x-container" id="inputDataGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative h-[450px] w-full bg-white rounded-2xl border border-slate-50 p-2">
+                <canvas id="tempChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-xs w-full shadow-2xl text-center">
+            <h3 class="text-xl font-black mb-2 text-slate-800">身分驗證</h3>
+            <p class="text-slate-400 text-sm mb-6">請輸入密碼切換至老師模式</p>
+            <input type="password" id="passField" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 text-center font-bold mb-6" placeholder="•••••">
+            <div class="flex gap-3">
+                <button id="cancelAuth" class="flex-1 py-3 text-slate-400 font-bold text-sm">取消</button>
+                <button id="confirmAuth" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg">確認</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
-        const GROUP_NAMES = ['第一組', '第二組', '第三組', '第四組', '第五組', '第六組'];
-        const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-        const REF_DATA = [17.5, 18.8, 21.0, 23.3, 26.9, 29.0, 29.1, 28.7, 28.4, 26.5, 22.8, 19.4];
-
-        let currentRole = 'student';
-        let currentGroup = 0;
-        let groupData = Array.from({ length: 6 }, (_, i) => ({
-            year: '',
-            temps: Array(12).fill(null),
-            visible: true
-        }));
-        let refVisible = true;
-        let chart;
-
-        window.onload = () => {
-            initRefGrid();
-            initChart();
-            renderUI();
+        const REF_TEMPS = [17.5, 18.8, 21.0, 23.3, 26.9, 29.0, 29.1, 28.7, 28.4, 26.5, 22.8, 19.4];
+        const COLORS = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4'];
+        
+        let state = {
+            isTeacher: false,
+            activeGroup: 0,
+            visibleGroups: new Array(6).fill(false),
+            groups: Array.from({length: 6}, () => ({
+                year: '',
+                data: new Array(12).fill(null)
+            }))
         };
 
-        function initRefGrid() {
-            const grid = document.getElementById('refGrid');
-            grid.innerHTML = REF_DATA.map((t, i) => `
-                <div class="input-item">
-                    <div class="month-label text-slate-300">${i+1}月</div>
-                    <input type="text" class="temp-input bg-slate-50 text-slate-400" value="${t}°" disabled>
-                </div>
-            `).join('');
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        let chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                datasets: [
+                    {
+                        label: '2025年',
+                        data: REF_TEMPS,
+                        borderColor: '#CBD5E1',
+                        borderWidth: 2,
+                        pointStyle: 'crossRot', // 圖表數據點維持交叉樣式
+                        pointRadius: 6,
+                        tension: 0.1,
+                        hidden: false
+                    },
+                    ...Array.from({length: 6}, (_, i) => ({
+                        label: `第${i+1}組`,
+                        data: new Array(12).fill(null),
+                        borderColor: COLORS[i],
+                        borderWidth: 3,
+                        pointStyle: 'crossRot', // 圖表數據點維持交叉樣式
+                        pointRadius: 6,
+                        pointBackgroundColor: COLORS[i],
+                        tension: 0.1,
+                        hidden: true
+                    }))
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { usePointStyle: true, font: { weight: 'bold' } }
+                    }
+                },
+                scales: { 
+                    y: { min: 10, max: 40, grid: { color: '#F1F5F9' }, title: { display: true, text: '溫度 (°C)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        function syncUI() {
+            const currentGroup = state.groups[state.activeGroup];
+            const yearStr = currentGroup.year || "";
+            const yearDisplay = currentGroup.year || "_______";
+            
+            if (state.isTeacher) {
+                document.getElementById('titlePrefix').innerText = "過去30年香港各月溫度的變化";
+                document.getElementById('yearInput').style.display = 'none';
+                document.getElementById('titleSuffix').style.display = 'none';
+                document.getElementById('groupButtonsContainer').style.display = 'none';
+                document.getElementById('dataInputArea').style.display = 'none';
+            } else {
+                document.getElementById('titlePrefix').innerText = "2025年與";
+                const inputEl = document.getElementById('yearInput');
+                inputEl.style.display = 'inline-block';
+                if (inputEl.value !== yearStr) inputEl.value = yearStr;
+                document.getElementById('titleSuffix').style.display = 'inline-block';
+                document.getElementById('titleSuffix').innerText = "年香港各月溫度變化比較";
+                document.getElementById('groupButtonsContainer').style.display = 'block';
+                document.getElementById('dataInputArea').style.display = 'block';
+                
+                // 更新輸入區域的實心方格顏色
+                const rectIcon = document.getElementById('groupRectIcon');
+                rectIcon.style.backgroundColor = COLORS[state.activeGroup];
+                document.getElementById('inputDataGrid').parentElement.parentElement.style.backgroundColor = `${COLORS[state.activeGroup]}08`; // 背景淺色
+                document.getElementById('inputDataGrid').parentElement.parentElement.style.borderColor = `${COLORS[state.activeGroup]}20`;
+                document.getElementById('inputLabelYear').style.color = COLORS[state.activeGroup];
+                document.getElementById('inputLabelYear').style.textDecorationColor = COLORS[state.activeGroup];
+            }
+
+            document.getElementById('inputLabelYear').innerText = `${yearDisplay}年輸入`;
+            updateTeacherPanel();
+            renderGrids();
+            updateChart();
         }
 
-        function initChart() {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: MONTHS,
-                    datasets: [
-                        {
-                            label: '2025年對照',
-                            data: REF_DATA,
-                            borderColor: '#cbd5e1',
-                            borderWidth: 2,
-                            pointStyle: 'rect',
-                            pointRadius: 6,
-                            tension: 0.1,
-                            hidden: false
-                        },
-                        {
-                            label: '當前組別',
-                            data: groupData[currentGroup].temps,
-                            borderColor: COLORS[currentGroup],
-                            borderWidth: 3,
-                            pointRadius: 8,
-                            tension: 0.1,
-                            spanGaps: true,
-                            hidden: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { min: 10, max: 40, ticks: { font: { weight: 'bold' } } },
-                        x: { ticks: { font: { weight: 'bold' } } }
-                    },
-                    plugins: { legend: { display: false } }
+        function updateTeacherPanel() {
+            state.groups.forEach((g, i) => {
+                const mon = document.getElementById(`mon-${i}`);
+                if (mon) {
+                    mon.querySelector('.g-year-display').innerText = g.year ? `${g.year}年` : "未填年份";
+                    const filled = g.data.filter(d => d !== null).length;
+                    mon.querySelector('.progress-bar-bg div').style.width = (filled/12*100) + '%';
                 }
             });
         }
 
-        function openPasswordModal() {
-            if (currentRole === 'teacher') return;
-            document.getElementById('passwordModal').style.display = 'flex';
-            document.getElementById('pwInput').focus();
-        }
-
-        function closeModal() {
-            document.getElementById('passwordModal').style.display = 'none';
-            document.getElementById('pwInput').value = '';
-        }
-
-        function verifyPassword() {
-            if (document.getElementById('pwInput').value === '123456') {
-                switchRole('teacher');
-                closeModal();
-            } else {
-                alert('密碼錯誤！');
+        function renderGrids() {
+            const refGrid = document.getElementById('refDataGrid');
+            const inputGrid = document.getElementById('inputDataGrid');
+            
+            if (refGrid.children.length === 0) {
+                for(let i=0; i<12; i++) {
+                    refGrid.innerHTML += `
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] font-bold text-slate-300 mb-1">${i+1}月</span>
+                            <div class="month-input flex items-center justify-center text-slate-400 text-sm">${REF_TEMPS[i]}°</div>
+                        </div>
+                    `;
+                }
             }
-        }
 
-        function switchRole(role) {
-            currentRole = role;
-            document.getElementById('btnStudent').className = `role-btn ${role === 'student' ? 'active' : 'inactive'}`;
-            document.getElementById('btnTeacher').className = `role-btn ${role === 'teacher' ? 'active' : 'inactive'}`;
-            
-            // 切換面板與標題
-            document.getElementById('teacherPanel').style.display = (role === 'teacher') ? 'block' : 'none';
-            document.getElementById('studentTitle').style.display = (role === 'teacher') ? 'none' : 'flex';
-            document.getElementById('teacherTitle').style.display = (role === 'teacher') ? 'flex' : 'none';
-            
-            renderUI();
-        }
-
-        function renderUI() {
-            // 組別選單
-            const tabs = document.getElementById('groupTabs');
-            tabs.innerHTML = GROUP_NAMES.map((name, i) => `
-                <button onclick="switchGroup(${i})" class="group-btn ${currentGroup === i ? 'active' : ''}">
-                    <span class="dot" style="background: ${currentGroup === i ? 'white' : COLORS[i]}"></span>
-                    ${name}
-                </button>
-            `).join('');
-
-            // 月份輸入框
-            const grid = document.getElementById('mainInputGrid');
-            grid.innerHTML = MONTHS.map((m, i) => `
-                <div class="input-item">
-                    <div class="month-label text-rose-500">${m}</div>
-                    <input type="number" step="0.1" class="temp-input bg-rose-50" 
-                        value="${groupData[currentGroup].temps[i] || ''}" 
-                        oninput="updateValue(${i}, this.value)">
-                </div>
-            `).join('');
-
-            // 更新輸入行標籤與年份
-            const yearVal = groupData[currentGroup].year || '____';
-            document.getElementById('inputRowLabel').innerText = `${yearVal}年數據輸入`;
-            document.getElementById('yearInput').value = groupData[currentGroup].year || '____';
-            
-            // 更新 TickBox 狀態
-            document.getElementById('refCheck').style.backgroundColor = refVisible ? '#94a3b8' : '#e2e8f0';
-            document.getElementById('currentGroupCheck').style.backgroundColor = groupData[currentGroup].visible ? COLORS[currentGroup] : '#e2e8f0';
-
-            if (currentRole === 'teacher') renderProgress();
-        }
-
-        function renderProgress() {
-            const grid = document.getElementById('progressGrid');
-            grid.innerHTML = groupData.map((data, i) => {
-                const filledCount = data.temps.filter(t => t !== null).length;
-                const percentage = (filledCount / 12) * 100;
-                return `
-                    <div class="progress-card">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs" style="background: ${COLORS[i]}20; color: ${COLORS[i]}">
-                            G${i+1}
-                        </div>
-                        <div class="flex-grow">
-                            <div class="flex justify-between text-[10px] mb-1">
-                                <span>${GROUP_NAMES[i]} (${data.year || '無年份'})</span>
-                                <span>${filledCount}/12</span>
-                            </div>
-                            <div class="progress-bar-bg">
-                                <div class="progress-bar-fill" style="width: ${percentage}%; background: ${COLORS[i]}"></div>
-                            </div>
-                        </div>
-                        <div class="cursor-pointer" onclick="toggleGroupVisibility(${i})">
-                            <div class="w-6 h-6 rounded border flex items-center justify-center" style="background: ${data.visible ? COLORS[i] : 'transparent'}; border-color: ${COLORS[i]}">
-                                ${data.visible ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
-                            </div>
-                        </div>
+            inputGrid.innerHTML = '';
+            for(let i=0; i<12; i++) {
+                const accentColor = COLORS[state.activeGroup];
+                inputGrid.innerHTML += `
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-bold mb-1" style="color: ${accentColor}">${i+1}月</span>
+                        <input type="number" step="0.1" class="month-input data-point text-sm" data-idx="${i}" value="${state.groups[state.activeGroup].data[i] || ''}" placeholder="--" onfocus="this.style.borderColor='${accentColor}'" onblur="this.style.borderColor='transparent'">
                     </div>
                 `;
-            }).join('');
-        }
-
-        function switchGroup(idx) {
-            currentGroup = idx;
-            renderUI();
-            updateChart();
-        }
-
-        function updateValue(mIdx, val) {
-            groupData[currentGroup].temps[mIdx] = val === "" ? null : parseFloat(val);
-            if (currentRole === 'teacher') renderProgress();
-            updateChart();
-        }
-
-        function toggleDataset(type) {
-            if (type === 0) {
-                refVisible = !refVisible;
-                chart.setDatasetVisibility(0, refVisible);
-            } else {
-                groupData[currentGroup].visible = !groupData[currentGroup].visible;
-                chart.setDatasetVisibility(1, groupData[currentGroup].visible);
             }
-            renderUI();
-            chart.update();
+
+            document.querySelectorAll('.data-point').forEach(input => {
+                input.oninput = (e) => {
+                    const idx = e.target.dataset.idx;
+                    const val = parseFloat(e.target.value);
+                    state.groups[state.activeGroup].data[idx] = isNaN(val) ? null : val;
+                    updateTeacherPanel();
+                    updateChart();
+                };
+            });
         }
 
-        function toggleGroupVisibility(idx) {
-            groupData[idx].visible = !groupData[idx].visible;
-            if (idx === currentGroup) {
-                chart.setDatasetVisibility(1, groupData[idx].visible);
-            }
-            renderProgress();
-            renderUI();
-            chart.update();
+        function renderGroupBtns() {
+            const container = document.getElementById('groupButtons');
+            container.innerHTML = '';
+            state.groups.forEach((_, i) => {
+                const active = i === state.activeGroup;
+                const btn = document.createElement('button');
+                btn.className = `flex-shrink-0 px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm flex items-center gap-2`;
+                btn.style.borderColor = active ? COLORS[i] : '#F1F5F9';
+                btn.style.backgroundColor = active ? COLORS[i] : 'white';
+                btn.style.color = active ? 'white' : '#94A3B8';
+                btn.innerHTML = `<span class="w-2 h-2 rounded-full" style="background:${active?'white':COLORS[i]}"></span> 第${['一','二','三','四','五','六'][i]}組`;
+                btn.onclick = () => {
+                    state.activeGroup = i;
+                    renderGroupBtns();
+                    syncUI();
+                };
+                container.appendChild(btn);
+            });
         }
 
         function updateChart() {
-            chart.data.datasets[1].data = groupData[currentGroup].temps;
-            chart.data.datasets[1].borderColor = COLORS[currentGroup];
-            chart.data.datasets[1].label = `${groupData[currentGroup].year || '____'}年 ${GROUP_NAMES[currentGroup]}`;
-            chart.setDatasetVisibility(1, groupData[currentGroup].visible);
+            if (!state.isTeacher) {
+                chart.data.datasets.forEach((ds, i) => {
+                    if (i === 0) {
+                        ds.hidden = !document.getElementById('toggleRef').checked;
+                    } else if (i === state.activeGroup + 1) {
+                        ds.data = state.groups[state.activeGroup].data;
+                        ds.label = (state.groups[state.activeGroup].year || "輸入") + "年";
+                        ds.hidden = !document.getElementById('toggleUser').checked;
+                    } else {
+                        ds.hidden = true;
+                    }
+                });
+            } else {
+                chart.data.datasets[0].hidden = false;
+                state.visibleGroups.forEach((isVisible, i) => {
+                    const ds = chart.data.datasets[i + 1];
+                    ds.data = state.groups[i].data;
+                    ds.label = `第${i+1}組 (${state.groups[i].year || '未填'}年)`;
+                    ds.hidden = !isVisible;
+                });
+            }
             chart.update();
         }
 
-        document.getElementById('yearInput').oninput = (e) => {
-            groupData[currentGroup].year = e.target.value;
-            document.getElementById('inputRowLabel').innerText = `${e.target.value || '____'}年數據輸入`;
+        document.getElementById('yearInput').addEventListener('input', (e) => {
+            state.groups[state.activeGroup].year = e.target.value;
+            const display = e.target.value || "_______";
+            document.getElementById('inputLabelYear').innerText = `${display}年輸入`;
+            updateTeacherPanel();
             updateChart();
+        });
+
+        document.querySelectorAll('.monitor-checkbox').forEach(chk => {
+            chk.onchange = (e) => {
+                const gIdx = parseInt(e.target.dataset.group);
+                state.visibleGroups[gIdx] = e.target.checked;
+                updateChart();
+            };
+        });
+
+        const btnTeacher = document.getElementById('btnTeacher');
+        const btnStudent = document.getElementById('btnStudent');
+        const authModal = document.getElementById('authModal');
+
+        btnTeacher.onclick = () => { if(!state.isTeacher) authModal.style.display = 'flex'; };
+        btnStudent.onclick = () => {
+            state.isTeacher = false;
+            document.getElementById('teacherDashboard').classList.add('hidden');
+            btnStudent.classList.add('active');
+            btnTeacher.classList.remove('active');
+            btnTeacher.innerHTML = "老師 🔒";
+            syncUI();
         };
+
+        document.getElementById('confirmAuth').onclick = () => {
+            if(document.getElementById('passField').value === "123456") {
+                state.isTeacher = true;
+                authModal.style.display = 'none';
+                document.getElementById('teacherDashboard').classList.remove('hidden');
+                btnTeacher.classList.add('active');
+                btnStudent.classList.remove('active');
+                btnTeacher.innerHTML = "老師 🔓";
+                document.getElementById('passField').value = '';
+                syncUI();
+            } else { 
+                const p = authModal.querySelector('p');
+                p.innerText = "密碼錯誤";
+                p.style.color = "#EF4444";
+            }
+        };
+
+        document.getElementById('cancelAuth').onclick = () => {
+            authModal.style.display = 'none';
+        };
+
+        document.getElementById('toggleRef').onchange = updateChart;
+        document.getElementById('toggleUser').onchange = updateChart;
+
+        renderGroupBtns();
+        syncUI();
     </script>
 </body>
 </html>
