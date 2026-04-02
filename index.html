@@ -3,125 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3x2 T形併桌終極版</title>
     <style>
-        /* 1. 極致壓縮，禁止頁面捲動，確保一畫面看清 6 組 */
-        body { font-family: sans-serif; background: #dfe6ed; margin: 0; padding: 5px; height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #dfe6ed; margin: 0; padding: 5px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .classroom { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; flex: 1; padding: 5px; }
+        .group-card { background: white; border: 1px solid #bbb; border-radius: 8px; display: flex; flex-direction: column; padding: 4px; }
+        .group-name { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 4px; color: #444; }
         
-        h4 { margin: 5px; font-size: 16px; color: #333; text-align: center; }
-
-        /* 2. 3x2 全班網格佈局 */
-        .grid-container { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); /* 橫向 3 組 */
-            grid-template-rows: repeat(2, 1fr);    /* 直向 2 組 */
-            gap: 8px; 
-            width: 100%; 
-            max-width: 950px;
-            flex: 1; /* 佔滿剩餘高度 */
-        }
-
-        .group-card { background: white; border-radius: 10px; padding: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .group-name { font-weight: bold; font-size: 14px; text-align: center; color: #555; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
-
-        /* 3. T形併桌核心佈局：完美還原併桌圖 */
-        .t-layout { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            grid-template-rows: 1fr 1.6fr; /* 上排扁，下排長，模擬直向枱 */
-            gap: 3px; background: #ddd; padding: 3px; border-radius: 6px; flex: 1;
-        }
-
-        .desk { background: white; border-radius: 4px; display: flex; justify-content: space-evenly; align-items: center; }
+        /* T形佈局：上排橫、下排直 */
+        .t-layout { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1.6fr; gap: 4px; flex: 1; background: #f0f0f0; padding: 4px; }
+        .desk { background: white; border: 1px solid #ddd; display: flex; justify-content: space-around; align-items: center; border-radius: 4px; }
         
-        /* 4. 圓形按鈕比例：為了 3x2 佈局而壓縮直徑 */
-        .circle { 
-            width: 32px; 
-            height: 32px; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            border: 2px solid transparent; 
-            transition: all 0.2s;
-        }
-        .g { background: #2ecc71; } /* 綠 (正) */
-        .r { background: #e74c3c; } /* 紅 (誤) */
+        .btn { width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; }
+        .btn-g { background: #2ecc71; } .btn-r { background: #e74c3c; }
+        
+        .v-g .btn-g { transform: scale(1.15); box-shadow: 0 0 8px #2ecc71; } .v-g .btn-r { opacity: 0.1; }
+        .v-r .btn-r { transform: scale(1.15); box-shadow: 0 0 8px #e74c3c; } .v-r .btn-g { opacity: 0.1; }
 
-        /* 選中視覺反饋 */
-        .active-g .g { transform: scale(1.15); border-color: #27ae60; box-shadow: 0 0 5px #2ecc71; }
-        .active-g .r { opacity: 0.1; }
-        .active-r .r { transform: scale(1.15); border-color: #c0392b; box-shadow: 0 0 5px #e74c3c; }
-        .active-r .g { opacity: 0.1; }
-
-        /* 5. 底部統計條 */
-        .footer { background: #2c3e50; color: white; padding: 10px; border-radius: 20px; display: flex; gap: 20px; align-items: center; font-size: 16px; margin: 10px 0; }
-        .reset-btn { background: white; border: none; padding: 5px 12px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .footer { background: #333; color: white; padding: 10px; display: flex; justify-content: space-around; align-items: center; border-radius: 12px 12px 0 0; }
     </style>
 </head>
 <body>
-
-    <h4>課室表決系統 (全班 3x2 視圖)</h4>
-
-    <div class="grid-container">
+    <div class="classroom">
         <script>
-            // 為了方便閱讀我用了 JS 生成，但在 W3Schools 絕對穩定
-            const grid = document.querySelector('.grid-container');
-            for (let g = 1; g <= 6; g++) {
-                grid.innerHTML += `
+            // 組號順序：第一行 5,3,1；第二行 6,4,2
+            const order = ["G5", "G3", "G1", "G6", "G4", "G2"];
+            order.forEach(g => {
+                document.write(`
                     <div class="group-card">
-                        <div class="group-name">第 ${g} 組</div>
+                        <div class="group-name">${g}組</div>
                         <div class="t-layout">
-                            <div class="desk" id="d-${g}-1"><div class="circle g" onclick="vote('${g}-1','g')"></div><div class="circle r" onclick="vote('${g}-1','r')"></div></div>
-                            <div class="desk" id="d-${g}-2"><div class="circle g" onclick="vote('${g}-2','g')"></div><div class="circle r" onclick="vote('${g}-2','r')"></div></div>
-                            <div class="desk" id="d-${g}-3"><div class="circle g" onclick="vote('${g}-3','g')"></div><div class="circle r" onclick="vote('${g}-3','r')"></div></div>
-                            <div class="desk" id="d-${g}-4"><div class="circle g" onclick="vote('${g}-4','g')"></div><div class="circle r" onclick="vote('${g}-4','r')"></div></div>
+                            <div class="desk" id="${g}1"><button class="btn btn-g" onclick="v('${g}1','g')"></button><button class="btn btn-r" onclick="v('${g}1','r')"></button></div>
+                            <div class="desk" id="${g}2"><button class="btn btn-g" onclick="v('${g}2','g')"></button><button class="btn btn-r" onclick="v('${g}2','r')"></button></div>
+                            <div class="desk" id="${g}3"><button class="btn btn-g" onclick="v('${g}3','g')"></button><button class="btn btn-r" onclick="v('${g}3','r')"></button></div>
+                            <div class="desk" id="${g}4"><button class="btn btn-g" onclick="v('${g}4','g')"></button><button class="btn btn-r" onclick="v('${g}4','r')"></button></div>
                         </div>
                     </div>
-                `;
+                `);
+            });
+            function v(id, t) {
+                let e = document.getElementById(id);
+                if(t==='g') { e.classList.toggle('v-g'); e.classList.remove('v-r'); }
+                else { e.classList.toggle('v-r'); e.classList.remove('v-g'); }
+                document.getElementById('a').innerText = document.querySelectorAll('.v-g').length;
+                document.getElementById('b').innerText = document.querySelectorAll('.v-r').length;
             }
         </script>
     </div>
-
     <div class="footer">
-        <span>同意: <b id="count-agree" style="color: #69f0ae;">0</b></span>
-        <span>反對: <b id="count-disagree" style="color: #ff8a80;">0</b></span>
-        <button class="reset-btn" onclick="resetAllVotes()">清空並開始下一輪</button>
+        <span>正: <b id="a">0</b> | 誤: <b id="b">0</b></span>
+        <button onclick="location.reload()" style="padding: 5px 15px; border-radius: 8px; border: none; font-weight: bold;">清空重置</button>
     </div>
-
-    <script>
-        // 投票函數：處理點擊事件
-        function vote(deskId, voteType) {
-            const deskElement = document.getElementById('d-' + deskId);
-            const isVotedAgree = deskElement.classList.contains('active-g');
-            const isVotedDisagree = deskElement.classList.contains('active-r');
-
-            // 移除舊狀態
-            deskElement.classList.remove('active-g', 'active-r');
-
-            if (voteType === 'g' && !isVotedAgree) {
-                // 如果點綠，添加綠
-                deskElement.classList.add('active-g');
-            } else if (voteType === 'r' && !isVotedDisagree) {
-                // 如果點紅，添加紅
-                deskElement.classList.add('active-r');
-            }
-            // 否則，恢復原狀（取消選擇）
-
-            updateStats(); // 更新底部統計
-        }
-
-        // 更新全班統計數字
-        function updateStats() {
-            document.getElementById('count-agree').innerText = document.querySelectorAll('.active-g').length;
-            document.getElementById('count-disagree').innerText = document.querySelectorAll('.active-r').length;
-        }
-
-        // 清空所有投票
-        function resetAllVotes() {
-            document.querySelectorAll('.desk').forEach(desk => {
-                desk.classList.remove('active-g', 'active-r');
-            });
-            updateStats();
-        }
-    </script>
 </body>
 </html>
