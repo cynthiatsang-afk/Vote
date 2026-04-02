@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLIMATE ANALYSIS TOOL - COLOR BAR</title>
+    <title>CLIMATE ANALYSIS TOOL - CHART OPTIMIZED</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -65,13 +65,24 @@
             white-space: nowrap;
         }
 
-        /* 數據欄左側的顏色直線樣式 */
-        .status-bar {
-            width: 6px;
-            height: 24px;
-            border-radius: 10px;
+        .cross-mark {
+            width: 18px;
+            height: 18px;
+            position: relative;
             display: inline-block;
         }
+        .cross-mark::before, .cross-mark::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: currentColor;
+            border-radius: 2px;
+        }
+        .cross-mark::before { transform: rotate(45deg); }
+        .cross-mark::after { transform: rotate(-45deg); }
 
         .data-row-container {
             background: white;
@@ -116,7 +127,10 @@
 
         const { useState, useEffect, useRef } = React;
         const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-        const DATA_2025_REF = [18.2, 19.5, 22.1, 25.4, 28.6, 31.2, 33.5, 32.8, 30.1, 26.5, 22.8, 19.1];
+        
+        // 2025 數據 (依據圖片 image_52816e.png)
+        const DATA_2025_REF = [17.5, 18.8, 21.0, 23.3, 26.9, 29.0, 29.1, 28.7, 28.4, 26.5, 22.8, 19.4];
+        
         const TEACHER_PASSWORD = "2109";
         
         const GROUP_CONFIGS = [
@@ -182,7 +196,7 @@
                         backgroundColor: '#cbd5e1',
                         borderWidth: 2,
                         tension: 0, 
-                        pointStyle: 'crossRot', // 圖表內維持交叉
+                        pointStyle: 'crossRot', 
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         spanGaps: true
@@ -200,7 +214,7 @@
                             backgroundColor: g.color,
                             borderWidth: 3,
                             tension: 0, 
-                            pointStyle: 'crossRot', // 圖表內維持交叉
+                            pointStyle: 'crossRot', 
                             pointRadius: 7,
                             pointHoverRadius: 10,
                             spanGaps: true
@@ -214,6 +228,11 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                left: 20 // 增加左側內邊距，配合 X 軸偏移
+                            }
+                        },
                         plugins: { 
                             legend: { 
                                 display: true, 
@@ -227,8 +246,24 @@
                             } 
                         },
                         scales: { 
-                            y: { min: 10, max: 40, ticks: { font: { weight: 'bold' } } },
-                            x: { ticks: { font: { weight: 'bold' } } }
+                            y: { 
+                                min: 10, 
+                                max: 40, 
+                                ticks: { 
+                                    font: { weight: 'bold', size: 14 },
+                                    stepSize: 5 // 每 5 一大格
+                                },
+                                grid: {
+                                    lineWidth: (context) => context.tick.value % 5 === 0 ? 2 : 1,
+                                    color: (context) => context.tick.value % 5 === 0 ? '#e2e8f0' : '#f1f5f9'
+                                }
+                            },
+                            x: { 
+                                offset: true, // 開啟偏移，讓 1 月離開縱軸
+                                ticks: { 
+                                    font: { weight: 'bold', size: 14 } 
+                                } 
+                            }
                         }
                     }
                 });
@@ -247,7 +282,6 @@
 
             return (
                 <div className="max-w-7xl mx-auto pb-20">
-                    {/* Header */}
                     <div className="flex justify-between items-center mb-6">
                         <div className="bg-indigo-50 px-4 py-2 rounded-xl text-indigo-600 font-black text-[10px] tracking-widest uppercase">
                             Climate Analysis Tool
@@ -258,7 +292,6 @@
                         </div>
                     </div>
 
-                    {/* Title & Group Selection Row */}
                     <div className="main-card p-8 md:p-12 mb-8">
                         <div className="text-center mb-10">
                             <h1 className="text-3xl md:text-5xl font-black text-slate-800 flex items-center justify-center gap-3 flex-wrap">
@@ -286,7 +319,6 @@
                                         boxShadow: activeGroupId === g.id ? `0 10px 20px ${g.color}33` : ''
                                     }}
                                 >
-                                    {/* 按鈕內的圓點保留 */}
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeGroupId === g.id ? '#fff' : g.color }}></div>
                                     {g.label}
                                 </button>
@@ -294,12 +326,10 @@
                         </div>
                     </div>
 
-                    {/* Input Area */}
                     <div className="mb-8">
-                        {/* 2025年對照行 - 改為直線 */}
                         <div className="data-row-container shadow-sm">
                             <div className="flex items-center gap-4 min-w-[180px]">
-                                <div className="status-bar bg-slate-300"></div>
+                                <div className="cross-mark text-slate-300"></div>
                                 <span className="text-slate-400 font-black text-sm">2025年對照</span>
                                 <input type="checkbox" checked={showRefLine} onChange={e => setShowRefLine(e.target.checked)} className="w-5 h-5 rounded accent-slate-400 ml-auto" />
                             </div>
@@ -315,10 +345,9 @@
                             </div>
                         </div>
 
-                        {/* 組別數據輸入行 - 改為直線 */}
                         <div className="data-row-container border-2" style={{ borderColor: activeColor + '22' }}>
                             <div className="flex items-center gap-4 min-w-[180px]">
-                                <div className="status-bar" style={{ backgroundColor: activeColor }}></div>
+                                <div className="cross-mark" style={{ color: activeColor }}></div>
                                 <span className="font-black text-sm" style={{ color: activeColor }}>
                                     {groupsData[`group${activeGroupId}`]?.year || "____"}年輸入
                                 </span>
@@ -348,14 +377,12 @@
                         </div>
                     </div>
 
-                    {/* Chart Area */}
                     <div className="chart-box">
-                        <div className="h-[450px]">
+                        <div className="h-[550px]"> {/* 增加圖表高度以拉長 Y 軸視覺距離 */}
                             <canvas ref={chartRef}></canvas>
                         </div>
                     </div>
 
-                    {/* Teacher Section */}
                     {role === 'teacher' && (
                         <div className="teacher-dashboard mt-12">
                             <div className="flex justify-between items-center mb-10">
@@ -370,7 +397,7 @@
                                         <div key={g.id} className="bg-slate-800/40 border border-slate-700/50 p-6 rounded-[2rem]">
                                             <div className="flex justify-between items-center mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-1 h-5 rounded-full" style={{ backgroundColor: g.color }}></div>
+                                                    <div className="cross-mark" style={{ color: g.color }}></div>
                                                     <span className="font-black">{g.label}</span>
                                                 </div>
                                                 <input type="checkbox" checked={visibleGroups[g.id]} onChange={() => setVisibleGroups(p => ({...p, [g.id]: !p[g.id]}))} className="w-4 h-4 accent-blue-500" />
@@ -387,7 +414,6 @@
                         </div>
                     )}
 
-                    {/* Password Modal */}
                     {showPasswordModal && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
                             <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl text-center">
