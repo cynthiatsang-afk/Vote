@@ -1,277 +1,412 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIMATE ANALYSIS TOOL - COLOR BAR</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'temp-lab-v13';
-
-const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-const REF_DATA_2025 = [17.1, 17.3, 21.1, 23.7, 27.2, 28.9, 29.3, 29.2, 28.9, 27.4, 22.3, 20.2];
-const GROUPS = [1, 2, 3, 4, 5, 6];
-const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#8b5cf6'];
-
-export default function App() {
-  const chartRef = useRef(null);
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState('none'); 
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [allGroupsData, setAllGroupsData] = useState({});
-  const [globalSettings, setGlobalSettings] = useState({ targetYear: 2024 });
-  const [visibility, setVisibility] = useState({ ref: true, student: true });
-  const [teacherGroupVisibility, setTeacherGroupVisibility] = useState({
-    1: true, 2: true, 3: true, 4: true, 5: true, 6: true
-  });
-  const [loading, setLoading] = useState(true);
-
-  // 初始化：偵測網址參數 (例如 ?group=1 或 ?role=teacher)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const g = params.get('group');
-    const r = params.get('role');
-
-    if (r === 'teacher') {
-      setRole('teacher');
-    } else if (g && GROUPS.includes(parseInt(g))) {
-      setRole('student');
-      setSelectedGroup(parseInt(g));
-    }
-
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b;
         }
-      } catch (err) { console.error(err); }
-    };
-    initAuth();
-    onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
-  }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global');
-    const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
-      if (docSnap.exists()) setGlobalSettings(docSnap.data());
-    }, (error) => console.error("Settings listener error:", error));
+        .main-card {
+            background: white;
+            border-radius: 3rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
 
-    const groupsRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-    const unsubGroups = onSnapshot(groupsRef, (snapshot) => {
-      const data = {};
-      snapshot.forEach((doc) => { data[doc.id] = doc.data().values; });
-      setAllGroupsData(data);
-    }, (error) => console.error("Groups listener error:", error));
+        .input-year-line {
+            border-bottom: 3px solid #6366f1;
+            background: transparent;
+            width: 140px; 
+            text-align: center;
+            outline: none;
+            color: #1e293b;
+            font-weight: 900;
+        }
 
-    return () => { unsubSettings(); unsubGroups(); };
-  }, [user]);
+        .groups-row-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
 
-  const updateData = async (index, value) => {
-    if (role === 'teacher' || !user || !selectedGroup) return;
-    const groupKey = `group${selectedGroup}`;
-    const currentValues = [...(allGroupsData[groupKey] || Array(12).fill(null))];
-    currentValues[index] = value === '' ? null : parseFloat(value);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupKey), { values: currentValues }, { merge: true });
-  };
+        .group-btn {
+            flex: 1;
+            min-width: 110px;
+            max-width: 150px;
+            padding: 0.85rem 0.5rem;
+            border-radius: 1.25rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
 
-  const updateYear = async (year) => {
-    if (!user) return;
-    const y = year === '' ? '' : parseInt(year);
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global'), { targetYear: y }, { merge: true });
-  };
+        /* 數據欄左側的顏色直線樣式 */
+        .status-bar {
+            width: 6px;
+            height: 24px;
+            border-radius: 10px;
+            display: inline-block;
+        }
 
-  const handleDownload = () => {
-    if (!chartRef.current) return;
-    const link = document.createElement('a');
-    link.download = `溫度實驗圖表_${role === 'teacher' ? '教師版' : '小組' + selectedGroup}.png`;
-    link.href = chartRef.current.toBase64Image();
-    link.click();
-  };
+        .data-row-container {
+            background: white;
+            border-radius: 2rem;
+            border: 1px solid #f1f5f9;
+            padding: 1.25rem 2rem;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
 
-  const chartData = {
-    labels: MONTHS,
-    datasets: [
-      {
-        label: '2025年 (參考數據)',
-        data: REF_DATA_2025,
-        borderColor: '#2563eb',
-        backgroundColor: '#2563eb',
-        hidden: !visibility.ref,
-        borderWidth: 2,
-        pointRadius: 2.5,
-        tension: 0.3,
-      },
-      ...(role === 'teacher' 
-        ? GROUPS.map((g, i) => ({
-            label: `第 ${g} 組 (${globalSettings.targetYear}年)`,
-            data: allGroupsData[`group${g}`] || [],
-            borderColor: GROUP_COLORS[i],
-            backgroundColor: GROUP_COLORS[i],
-            borderWidth: 2,
-            pointRadius: 2,
-            spanGaps: true,
-            hidden: !teacherGroupVisibility[g],
-            tension: 0.3,
-          }))
-        : [{
-            label: `${globalSettings.targetYear}年 (第 ${selectedGroup} 組)`,
-            data: allGroupsData[`group${selectedGroup}`] || [],
-            borderColor: '#ef4444',
-            backgroundColor: '#ef4444',
-            hidden: !visibility.student,
-            borderWidth: 3,
-            pointRadius: 3,
-            spanGaps: true,
-            tension: 0.3,
-          }]
-      )
-    ]
-  };
+        .chart-box {
+            background: white;
+            border-radius: 3rem;
+            padding: 2.5rem;
+            border: 1px solid #e2e8f0;
+        }
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: { min: 0, max: 35, title: { display: true, text: '溫度 (°C)' } },
-      x: { title: { display: true, text: '月份' } }
-    },
-    plugins: { legend: { position: 'top' } }
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center italic text-slate-400">連線中...</div>;
-
-  if (role === 'none') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-800">
-        <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-md text-center border border-slate-100">
-          <h1 className="text-3xl font-black mb-8">氣候實驗室</h1>
-          <button onClick={() => setRole('teacher')} className="w-full py-4 mb-4 bg-indigo-600 text-white rounded-2xl font-bold">教師介面</button>
-          <div className="grid grid-cols-2 gap-3">
-            {GROUPS.map(g => (
-              <button key={g} onClick={() => { setRole('student'); setSelectedGroup(g); }} className="py-4 border-2 border-slate-200 rounded-2xl font-bold hover:border-indigo-500">第 {g} 組</button>
-            ))}
-          </div>
-          <p className="mt-8 text-xs text-slate-400 font-medium">提示：老師可將網址後加入 ?group=1 給學生直接登入</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-white p-4 md:p-8 font-sans text-slate-800">
-      <div className="max-w-7xl mx-auto">
+        .scroll-container::-webkit-scrollbar { height: 6px; }
+        .scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        {/* 標題區域：教師無輸入欄，學生有 */}
-        <div className="text-center mb-10 border-b-2 border-slate-100 pb-10">
-          {role === 'teacher' ? (
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-              過去30年香港各月溫度的變化比較
-            </h1>
-          ) : (
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <h1 className="text-3xl font-black">2025年與</h1>
-              <input 
-                type="number" 
-                value={globalSettings.targetYear || ''} 
-                onChange={(e) => updateYear(e.target.value)}
-                className="w-36 px-4 py-2 text-center text-3xl font-black border-4 border-blue-600 rounded-2xl text-blue-700 outline-none"
-              />
-              <h1 className="text-3xl font-black">年香港的溫度比較</h1>
-            </div>
-          )}
-          
-          <div className="mt-6 flex justify-center items-center gap-6 text-sm">
-            <span className="px-4 py-1.5 bg-slate-100 rounded-full font-bold">
-               {role === 'teacher' ? '📍 教師監控中' : `📍 組別：第 ${selectedGroup} 組`}
-            </span>
-            <button onClick={() => { window.location.search = ''; setRole('none'); }} className="text-slate-400 hover:text-red-500 underline">切換身份</button>
-          </div>
-        </div>
+        .teacher-dashboard {
+            background-color: #0f172a;
+            border-radius: 2.5rem;
+            padding: 2.5rem;
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div id="root"></div>
 
-        {/* 數據填寫表 */}
-        <div className="mb-10 overflow-x-auto rounded-3xl border border-slate-200">
-          <table className="w-full text-center">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="p-4 border-r text-left">數據來源</th>
-                {MONTHS.map(m => <th key={m} className="p-2 border-r">{m}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="bg-blue-50/30">
-                <td className="p-4 text-left border-r font-bold text-blue-600 italic">2025年數據</td>
-                {REF_DATA_2025.map((d, i) => <td key={i} className="p-2 border-r text-blue-300">{d}</td>)}
-              </tr>
-              <tr>
-                <td className="p-4 text-left border-r font-black text-red-600">
-                  {globalSettings.targetYear}年 {role === 'student' ? '(您的數據)' : `(第${selectedGroup || '1'}組)`}
-                </td>
-                {MONTHS.map((_, i) => (
-                  <td key={i} className="p-2 border-r">
-                    <input 
-                      type="number" step="0.1"
-                      disabled={role === 'teacher'}
-                      value={allGroupsData[`group${selectedGroup || 1}`]?.[i] ?? ''}
-                      onChange={(e) => updateData(i, e.target.value)}
-                      className={`w-full text-center font-black text-xl bg-transparent outline-none ${role === 'teacher' ? 'text-slate-300' : 'text-red-600 focus:bg-red-50'}`}
-                      placeholder="--"
-                    />
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <script type="text/babel">
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'climate-lab-v23';
 
-        {/* 圖表 */}
-        <div className="bg-white p-6 border border-slate-200 rounded-[2rem] shadow-xl mb-10">
-          <div className="flex justify-between items-center mb-4">
-             <h3 className="font-black text-lg">數據視覺化圖表</h3>
-             <button onClick={handleDownload} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold">下載圖片</button>
-          </div>
-          <div className="h-[450px]"><Line ref={chartRef} data={chartData} options={options} /></div>
-        </div>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
-        {/* 教師儀表板 */}
-        {role === 'teacher' && (
-          <div className="p-8 bg-slate-900 rounded-[2rem] text-white">
-            <h3 className="text-xl font-black mb-6 text-indigo-400 italic underline">教師實時進度監控</h3>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              {GROUPS.map(g => {
-                const count = (allGroupsData[`group${g}`] || []).filter(v => v !== null && v !== '').length;
-                const isVisible = teacherGroupVisibility[g];
-                return (
-                  <div key={g} className={`p-4 rounded-2xl border-2 ${isVisible ? 'border-slate-700 bg-slate-800' : 'border-transparent opacity-30'}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold">第 {g} 組</span>
-                      <input type="checkbox" checked={isVisible} onChange={() => setTeacherGroupVisibility(p => ({...p, [g]: !p[g]}))} />
+        const { useState, useEffect, useRef } = React;
+        const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        const DATA_2025_REF = [18.2, 19.5, 22.1, 25.4, 28.6, 31.2, 33.5, 32.8, 30.1, 26.5, 22.8, 19.1];
+        const TEACHER_PASSWORD = "2109";
+        
+        const GROUP_CONFIGS = [
+            { id: 1, color: '#ef4444', label: '第一組' },
+            { id: 2, color: '#3b82f6', label: '第二組' },
+            { id: 3, color: '#10b981', label: '第三組' },
+            { id: 4, color: '#f59e0b', label: '第四組' },
+            { id: 5, color: '#8b5cf6', label: '第五組' },
+            { id: 6, color: '#06b6d4', label: '第六組' }
+        ];
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [role, setRole] = useState('student');
+            const [showPasswordModal, setShowPasswordModal] = useState(false);
+            const [inputPassword, setInputPassword] = useState('');
+            const [activeGroupId, setActiveGroupId] = useState(1);
+            const [groupsData, setGroupsData] = useState({});
+            const [visibleGroups, setVisibleGroups] = useState({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true });
+            const [showRefLine, setShowRefLine] = useState(true);
+            const [loading, setLoading] = useState(true);
+            
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+                };
+                initAuth();
+                const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
+                return () => unsubscribe();
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const groupsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups');
+                const unsubscribe = groupsRef.onSnapshot(snapshot => {
+                    const data = {};
+                    snapshot.forEach(doc => { data[doc.id] = doc.data(); });
+                    setGroupsData(data);
+                    setLoading(false);
+                }, (err) => console.error(err));
+                return () => unsubscribe();
+            }, [user]);
+
+            useEffect(() => {
+                if (!chartRef.current || loading) return;
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInstance.current) chartInstance.current.destroy();
+
+                const datasets = [];
+                
+                if (showRefLine) {
+                    datasets.push({
+                        label: '2025 年 (對照)',
+                        data: DATA_2025_REF,
+                        borderColor: '#cbd5e1',
+                        backgroundColor: '#cbd5e1',
+                        borderWidth: 2,
+                        tension: 0, 
+                        pointStyle: 'crossRot', // 圖表內維持交叉
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        spanGaps: true
+                    });
+                }
+
+                GROUP_CONFIGS.forEach(g => {
+                    const isVisible = role === 'teacher' ? visibleGroups[g.id] : (activeGroupId === g.id);
+                    if (isVisible) {
+                        const gData = groupsData[`group${g.id}`] || { values: Array(12).fill(null), year: '' };
+                        datasets.push({
+                            label: `${gData.year || g.label} 年`,
+                            data: gData.values,
+                            borderColor: g.color,
+                            backgroundColor: g.color,
+                            borderWidth: 3,
+                            tension: 0, 
+                            pointStyle: 'crossRot', // 圖表內維持交叉
+                            pointRadius: 7,
+                            pointHoverRadius: 10,
+                            spanGaps: true
+                        });
+                    }
+                });
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: MONTHS, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { 
+                                display: true, 
+                                position: 'top',
+                                labels: { 
+                                    usePointStyle: true,
+                                    pointStyle: 'crossRot', 
+                                    padding: 20,
+                                    font: { weight: 'bold', size: 14 }
+                                }
+                            } 
+                        },
+                        scales: { 
+                            y: { min: 10, max: 40, ticks: { font: { weight: 'bold' } } },
+                            x: { ticks: { font: { weight: 'bold' } } }
+                        }
+                    }
+                });
+            }, [groupsData, loading, activeGroupId, visibleGroups, showRefLine, role]);
+
+            const updateField = async (field, value) => {
+                const groupKey = `group${activeGroupId}`;
+                const current = groupsData[groupKey] || { values: Array(12).fill(null), year: '' };
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(groupKey).set({
+                    ...current, [field]: value
+                });
+            };
+
+            const activeGroup = GROUP_CONFIGS.find(x=>x.id===activeGroupId);
+            const activeColor = activeGroup.color;
+
+            return (
+                <div className="max-w-7xl mx-auto pb-20">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="bg-indigo-50 px-4 py-2 rounded-xl text-indigo-600 font-black text-[10px] tracking-widest uppercase">
+                            Climate Analysis Tool
+                        </div>
+                        <div className="bg-slate-200 p-1 rounded-xl flex items-center">
+                            <button onClick={() => setRole('student')} className={`px-5 py-1.5 rounded-lg text-sm font-bold transition-all ${role === 'student' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}>學生</button>
+                            <button onClick={() => role === 'student' ? setShowPasswordModal(true) : setRole('student')} className={`px-5 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${role === 'teacher' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}>老師 🔒</button>
+                        </div>
                     </div>
-                    <div className="text-2xl font-black" style={{color: GROUP_COLORS[g-1]}}>{Math.round(count/12*100)}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-      </div>
-    </div>
-  );
-}
+                    {/* Title & Group Selection Row */}
+                    <div className="main-card p-8 md:p-12 mb-8">
+                        <div className="text-center mb-10">
+                            <h1 className="text-3xl md:text-5xl font-black text-slate-800 flex items-center justify-center gap-3 flex-wrap">
+                                2025年與 
+                                <input 
+                                    type="number" 
+                                    className="input-year-line" 
+                                    value={groupsData[`group${activeGroupId}`]?.year || ""} 
+                                    onChange={(e) => updateField('year', e.target.value)} 
+                                    placeholder="年份"
+                                    style={{ borderBottomColor: activeColor }}
+                                />
+                                年氣溫對比圖
+                            </h1>
+                        </div>
+                        
+                        <div className="groups-row-container">
+                            {GROUP_CONFIGS.map(g => (
+                                <button 
+                                    key={g.id} 
+                                    onClick={() => setActiveGroupId(g.id)}
+                                    className={`group-btn ${activeGroupId === g.id ? 'text-white border-transparent' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}
+                                    style={{ 
+                                        backgroundColor: activeGroupId === g.id ? g.color : '',
+                                        boxShadow: activeGroupId === g.id ? `0 10px 20px ${g.color}33` : ''
+                                    }}
+                                >
+                                    {/* 按鈕內的圓點保留 */}
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeGroupId === g.id ? '#fff' : g.color }}></div>
+                                    {g.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="mb-8">
+                        {/* 2025年對照行 - 改為直線 */}
+                        <div className="data-row-container shadow-sm">
+                            <div className="flex items-center gap-4 min-w-[180px]">
+                                <div className="status-bar bg-slate-300"></div>
+                                <span className="text-slate-400 font-black text-sm">2025年對照</span>
+                                <input type="checkbox" checked={showRefLine} onChange={e => setShowRefLine(e.target.checked)} className="w-5 h-5 rounded accent-slate-400 ml-auto" />
+                            </div>
+                            <div className="flex-1 ml-8 overflow-x-auto scroll-container">
+                                <div className="min-w-[800px] flex justify-between">
+                                    {MONTHS.map((m, i) => (
+                                        <div key={m} className="flex flex-col items-center">
+                                            <span className="text-[10px] font-black text-slate-300 mb-2 uppercase">{m}</span>
+                                            <div className="text-slate-300 font-black text-lg bg-slate-50 px-3 py-1 rounded-lg">{DATA_2025_REF[i]}°</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 組別數據輸入行 - 改為直線 */}
+                        <div className="data-row-container border-2" style={{ borderColor: activeColor + '22' }}>
+                            <div className="flex items-center gap-4 min-w-[180px]">
+                                <div className="status-bar" style={{ backgroundColor: activeColor }}></div>
+                                <span className="font-black text-sm" style={{ color: activeColor }}>
+                                    {groupsData[`group${activeGroupId}`]?.year || "____"}年輸入
+                                </span>
+                                <input type="checkbox" checked={true} readOnly className="w-5 h-5 rounded ml-auto" style={{ accentColor: activeColor }} />
+                            </div>
+                            <div className="flex-1 ml-8 overflow-x-auto scroll-container">
+                                <div className="min-w-[800px] flex justify-between">
+                                    {MONTHS.map((m, i) => (
+                                        <div key={m} className="flex flex-col items-center">
+                                            <span className="text-[10px] font-black text-slate-400 mb-2 uppercase" style={{ color: activeColor }}>{m}</span>
+                                            <input 
+                                                type="number" 
+                                                className="w-16 py-3 rounded-xl text-center font-black text-xl border-2 border-transparent focus:border-slate-200 outline-none transition-all"
+                                                style={{ color: activeColor, backgroundColor: activeColor + '08' }}
+                                                value={groupsData[`group${activeGroupId}`]?.values?.[i] || ""}
+                                                onChange={(e) => {
+                                                    const newVals = [...(groupsData[`group${activeGroupId}`]?.values || Array(12).fill(null))];
+                                                    newVals[i] = e.target.value === "" ? null : parseFloat(e.target.value);
+                                                    updateField('values', newVals);
+                                                }}
+                                                placeholder="--"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chart Area */}
+                    <div className="chart-box">
+                        <div className="h-[450px]">
+                            <canvas ref={chartRef}></canvas>
+                        </div>
+                    </div>
+
+                    {/* Teacher Section */}
+                    {role === 'teacher' && (
+                        <div className="teacher-dashboard mt-12">
+                            <div className="flex justify-between items-center mb-10">
+                                <h2 className="text-2xl font-black">實時監控面板</h2>
+                                <span className="bg-slate-800 px-4 py-1 rounded-full text-xs font-bold text-slate-400">密碼: 2109</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {GROUP_CONFIGS.map(g => {
+                                    const gData = groupsData[`group${g.id}`] || { values: [], year: '' };
+                                    const filled = (gData.values || []).filter(v => v !== null && v !== "").length;
+                                    return (
+                                        <div key={g.id} className="bg-slate-800/40 border border-slate-700/50 p-6 rounded-[2rem]">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-1 h-5 rounded-full" style={{ backgroundColor: g.color }}></div>
+                                                    <span className="font-black">{g.label}</span>
+                                                </div>
+                                                <input type="checkbox" checked={visibleGroups[g.id]} onChange={() => setVisibleGroups(p => ({...p, [g.id]: !p[g.id]}))} className="w-4 h-4 accent-blue-500" />
+                                            </div>
+                                            <div className="text-xl font-black mb-4">{gData.year ? `${gData.year} 年` : '未設定年份'}</div>
+                                            <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                                                <div className="h-full transition-all duration-500" style={{ width: `${(filled/12)*100}%`, backgroundColor: g.color }}></div>
+                                            </div>
+                                            <div className="text-[9px] text-slate-500 mt-2 font-bold uppercase tracking-widest text-right">{filled} / 12 月份</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Password Modal */}
+                    {showPasswordModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                            <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl text-center">
+                                <div className="text-4xl mb-4">🔐</div>
+                                <h3 className="text-xl font-black mb-6 text-slate-800">輸入權限密碼</h3>
+                                <input type="password" autoFocus className="w-full text-center text-3xl font-black border-b-4 border-slate-100 focus:border-indigo-500 outline-none mb-8 pb-2" value={inputPassword} onChange={(e) => {
+                                    setInputPassword(e.target.value);
+                                    if (e.target.value === TEACHER_PASSWORD) { setRole('teacher'); setShowPasswordModal(false); setInputPassword(''); }
+                                }} />
+                                <button onClick={() => setShowPasswordModal(false)} className="text-slate-400 font-bold hover:text-slate-600">取消返回</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
