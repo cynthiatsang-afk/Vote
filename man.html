@@ -31,7 +31,6 @@
         }
         button {
             padding: 10px 25px;
-            background-color: #3b82f6;
             color: white;
             border: none;
             border-radius: 12px;
@@ -39,13 +38,13 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        button:hover {
-            background-color: #2563eb;
-            transform: translateY(-2px);
-        }
-        button:active {
-            transform: translateY(0);
-        }
+        .btn-primary { background-color: #3b82f6; }
+        .btn-primary:hover { background-color: #2563eb; transform: translateY(-2px); }
+        
+        .btn-secondary { background-color: #64748b; }
+        .btn-secondary:hover { background-color: #475569; transform: translateY(-2px); }
+        
+        button:active { transform: translateY(0); }
     </style>
 </head>
 <body>
@@ -58,15 +57,19 @@
     <canvas id="animationCanvas" width="800" height="500"></canvas>
 
     <div class="controls">
-        <button onclick="resetAnimation()">重新開始</button>
+        <!-- 暫停按鈕 -->
+        <button id="pauseBtn" class="btn-secondary" onclick="togglePause()">暫停</button>
+        <button class="btn-primary" onclick="resetAnimation()">重新開始</button>
     </div>
 
     <script>
         const canvas = document.getElementById('animationCanvas');
         const ctx = canvas.getContext('2d');
+        const pauseBtn = document.getElementById('pauseBtn');
 
         // 動態參數
         let frame = 0;
+        let isPaused = false;
         let stickman = {
             x: 50,
             y: 400,
@@ -103,7 +106,7 @@
             ctx.lineWidth = 6;
             ctx.stroke();
             
-            // 斜路下方的填充效果（可選）
+            // 斜路下方的填充效果
             ctx.beginPath();
             ctx.moveTo(rampStart, groundY);
             ctx.lineTo(slideStart, platformTop);
@@ -182,13 +185,22 @@
                 ctx.beginPath();
                 ctx.moveTo(0, -35);
                 ctx.lineTo(-15, -45);
-                ctx.stroke()
+                ctx.stroke();
             }
 
             ctx.restore();
         }
 
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "繼續" : "暫停";
+            pauseBtn.classList.toggle('btn-secondary', !isPaused);
+            pauseBtn.classList.toggle('btn-primary', isPaused);
+        }
+
         function update() {
+            if (isPaused) return; // 暫停時跳過更新邏輯
+
             frame++;
             
             if (stickman.state === 'RUNNING') {
@@ -256,6 +268,9 @@
         }
 
         function resetAnimation() {
+            isPaused = false;
+            pauseBtn.innerText = "暫停";
+            pauseBtn.className = "btn-secondary";
             stickman = {
                 x: -50,
                 y: groundY,
