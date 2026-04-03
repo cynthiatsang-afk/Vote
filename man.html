@@ -12,54 +12,78 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
             overflow: hidden;
             font-family: 'Noto Sans TC', sans-serif;
         }
-        canvas {
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
             background-color: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            max-width: 95%;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #fafafa;
+            border-radius: 16px;
             touch-action: none;
         }
         .controls {
-            margin-top: 20px;
+            margin-top: 15px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
+            width: 100%;
+            justify-content: center;
+            padding-bottom: 5px;
         }
         button {
-            padding: 10px 25px;
+            padding: 12px 30px;
             color: white;
             border: none;
-            border-radius: 12px;
-            font-weight: bold;
+            border-radius: 14px;
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        .btn-primary { background-color: #3b82f6; }
-        .btn-primary:hover { background-color: #2563eb; transform: translateY(-2px); }
+        .btn-pause { background-color: #64748b; }
+        .btn-pause:hover { background-color: #475569; transform: translateY(-2px); }
         
-        .btn-secondary { background-color: #64748b; }
-        .btn-secondary:hover { background-color: #475569; transform: translateY(-2px); }
+        .btn-resume { background-color: #10b981; }
+        .btn-resume:hover { background-color: #059669; transform: translateY(-2px); }
+
+        .btn-reset { background-color: #3b82f6; }
+        .btn-reset:hover { background-color: #2563eb; transform: translateY(-2px); }
         
-        button:active { transform: translateY(0); }
+        button:active { transform: translateY(0); box-shadow: none; }
     </style>
 </head>
 <body>
 
-    <div class="text-center mb-4">
-        <h1 class="text-2xl font-black text-slate-800">火柴人斜路滑梯冒險</h1>
-        <p class="text-slate-500">衝上斜坡，體驗極速快感！</p>
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-black text-slate-800 tracking-tight">火柴人斜路滑梯冒險</h1>
+        <p class="text-slate-500 font-medium">現在你可以隨時點擊「暫停」來觀察動作</p>
     </div>
 
-    <canvas id="animationCanvas" width="800" height="500"></canvas>
+    <div class="canvas-container">
+        <!-- 動畫畫布 -->
+        <canvas id="animationCanvas" width="800" height="450"></canvas>
 
-    <div class="controls">
-        <!-- 暫停按鈕 -->
-        <button id="pauseBtn" class="btn-secondary" onclick="togglePause()">暫停</button>
-        <button class="btn-primary" onclick="resetAnimation()">重新開始</button>
+        <!-- 控制區域：確保在畫布下方直接顯示 -->
+        <div class="controls">
+            <button id="pauseBtn" class="btn-pause" onclick="togglePause()">暫停</button>
+            <button class="btn-reset" onclick="resetAnimation()">重新開始</button>
+        </div>
     </div>
 
     <script>
@@ -71,120 +95,118 @@
         let frame = 0;
         let isPaused = false;
         let stickman = {
-            x: 50,
-            y: 400,
-            state: 'RUNNING', // RUNNING, ON_RAMP, SLIDING, LANDED
+            x: -50,
+            y: 350,
+            state: 'RUNNING', 
             progress: 0,
             angle: 0
         };
 
-        // 場景配置
-        const groundY = 400;
+        // 場景配置 (相對於 800x450)
+        const groundY = 350;
         const rampStart = 150;
-        const rampWidth = 200; // 斜路區域
-        const platformTop = 150; // 最高點
+        const rampWidth = 200; 
+        const platformTop = 120; 
         const slideStart = rampStart + rampWidth;
-        const slideEnd = 650;
+        const slideEnd = 680;
 
-        // 計算斜路的固定角度
         const rampAngle = Math.atan2(platformTop - groundY, rampWidth);
 
         function drawBackground() {
-            // 畫地面
+            // 繪製地面
             ctx.beginPath();
             ctx.moveTo(0, groundY);
             ctx.lineTo(canvas.width, groundY);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // 繪製斜路
+            ctx.beginPath();
+            ctx.moveTo(rampStart, groundY);
+            ctx.lineTo(slideStart, platformTop);
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            
+            // 斜路下方的填充
+            ctx.beginPath();
+            ctx.moveTo(rampStart, groundY);
+            ctx.lineTo(slideStart, platformTop);
+            ctx.lineTo(slideStart, groundY);
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fill();
+
+            // 滑梯支架
+            ctx.beginPath();
+            ctx.moveTo(slideStart, platformTop);
+            ctx.lineTo(slideStart, groundY);
             ctx.strokeStyle = '#94a3b8';
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            // 畫斜路 (Ramp)
-            ctx.beginPath();
-            ctx.moveTo(rampStart, groundY);
-            ctx.lineTo(slideStart, platformTop);
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 6;
-            ctx.stroke();
-            
-            // 斜路下方的填充效果
-            ctx.beginPath();
-            ctx.moveTo(rampStart, groundY);
-            ctx.lineTo(slideStart, platformTop);
-            ctx.lineTo(slideStart, groundY);
-            ctx.fillStyle = '#e2e8f0';
-            ctx.fill();
-
-            // 畫滑梯支架
+            // 繪製滑梯
             ctx.beginPath();
             ctx.moveTo(slideStart, platformTop);
-            ctx.lineTo(slideStart, groundY);
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 4;
-            ctx.stroke();
-
-            // 畫滑梯（曲線）
-            ctx.beginPath();
-            ctx.moveTo(slideStart, platformTop);
-            ctx.quadraticCurveTo(slideStart + 100, platformTop, slideEnd, groundY);
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 12;
+            ctx.quadraticCurveTo(slideStart + 120, platformTop, slideEnd, groundY);
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 14;
             ctx.lineCap = 'round';
             ctx.stroke();
         }
 
-        function drawStickman(x, y, angle = 0, pose = 'walk') {
+        function drawStickman(x, y, angle = 0, pose = 'run') {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle);
             
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 5;
             ctx.lineCap = 'round';
 
-            // 頭
+            // 頭部
             ctx.beginPath();
-            ctx.arc(0, -50, 8, 0, Math.PI * 2);
+            ctx.arc(0, -55, 10, 0, Math.PI * 2);
             ctx.stroke();
 
             // 身體
             ctx.beginPath();
-            ctx.moveTo(0, -42);
+            ctx.moveTo(0, -45);
             ctx.lineTo(0, -15);
             ctx.stroke();
 
-            let limbSpeed = frame * 0.15;
+            let limbSpeed = frame * 0.2;
             
             if (pose === 'run') {
-                // 跑步動作
-                let legMove = Math.sin(limbSpeed) * 20;
-                let armMove = Math.cos(limbSpeed) * 15;
+                let legMove = Math.sin(limbSpeed) * 22;
+                let armMove = Math.cos(limbSpeed) * 18;
                 
                 // 腿
                 ctx.beginPath();
                 ctx.moveTo(0, -15);
-                ctx.lineTo(legMove, 0); // 左腿
+                ctx.lineTo(legMove, 5); 
                 ctx.moveTo(0, -15);
-                ctx.lineTo(-legMove, 0); // 右腿
+                ctx.lineTo(-legMove, 5); 
                 ctx.stroke();
 
                 // 手
                 ctx.beginPath();
-                ctx.moveTo(0, -35);
+                ctx.moveTo(0, -40);
                 ctx.lineTo(armMove, -20);
-                ctx.moveTo(0, -35);
+                ctx.moveTo(0, -40);
                 ctx.lineTo(-armMove, -20);
                 ctx.stroke();
             } else if (pose === 'slide') {
                 // 滑行動作
                 ctx.beginPath();
                 ctx.moveTo(0, -15);
-                ctx.lineTo(15, -5); 
-                ctx.lineTo(25, -10);
+                ctx.lineTo(20, -5); 
+                ctx.lineTo(35, -12);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(0, -35);
-                ctx.lineTo(-15, -45);
+                ctx.moveTo(0, -40);
+                ctx.lineTo(-20, -50);
                 ctx.stroke();
             }
 
@@ -193,18 +215,22 @@
 
         function togglePause() {
             isPaused = !isPaused;
-            pauseBtn.innerText = isPaused ? "繼續" : "暫停";
-            pauseBtn.classList.toggle('btn-secondary', !isPaused);
-            pauseBtn.classList.toggle('btn-primary', isPaused);
+            if (isPaused) {
+                pauseBtn.innerText = "繼續動畫";
+                pauseBtn.className = "btn-resume";
+            } else {
+                pauseBtn.innerText = "暫停";
+                pauseBtn.className = "btn-pause";
+            }
         }
 
         function update() {
-            if (isPaused) return; // 暫停時跳過更新邏輯
+            if (isPaused) return;
 
             frame++;
             
             if (stickman.state === 'RUNNING') {
-                stickman.x += 2.5;
+                stickman.x += 3.5;
                 stickman.angle = 0;
                 if (stickman.x >= rampStart) {
                     stickman.state = 'ON_RAMP';
@@ -212,11 +238,9 @@
                 }
             } 
             else if (stickman.state === 'ON_RAMP') {
-                stickman.progress += 0.006;
+                stickman.progress += 0.008;
                 stickman.x = rampStart + rampWidth * stickman.progress;
                 stickman.y = groundY - (groundY - platformTop) * stickman.progress;
-                
-                // 上斜坡時身體傾斜
                 stickman.angle = rampAngle;
 
                 if (stickman.progress >= 1) {
@@ -225,17 +249,16 @@
                 }
             }
             else if (stickman.state === 'SLIDING') {
-                stickman.progress += 0.02;
+                stickman.progress += 0.025;
                 
                 const t = stickman.progress;
                 const p0 = {x: slideStart, y: platformTop};
-                const p1 = {x: slideStart + 100, y: platformTop};
+                const p1 = {x: slideStart + 120, y: platformTop};
                 const p2 = {x: slideEnd, y: groundY};
 
                 stickman.x = (1-t)**2 * p0.x + 2*(1-t)*t * p1.x + t**2 * p2.x;
                 stickman.y = (1-t)**2 * p0.y + 2*(1-t)*t * p1.y + t**2 * p2.y;
 
-                // 計算曲線切線角度
                 const dx = 2*(1-t)*(p1.x - p0.x) + 2*t*(p2.x - p1.x);
                 const dy = 2*(1-t)*(p1.y - p0.y) + 2*t*(p2.y - p1.y);
                 stickman.angle = Math.atan2(dy, dx);
@@ -247,8 +270,8 @@
                 }
             }
             else if (stickman.state === 'LANDED') {
-                stickman.x += 1.5;
-                if (stickman.x > canvas.width + 50) {
+                stickman.x += 2.5;
+                if (stickman.x > canvas.width + 60) {
                     resetAnimation();
                 }
             }
@@ -258,9 +281,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawBackground();
 
-            let pose = 'run';
-            if (stickman.state === 'SLIDING') pose = 'slide';
-
+            let pose = (stickman.state === 'SLIDING') ? 'slide' : 'run';
             drawStickman(stickman.x, stickman.y, stickman.angle, pose);
 
             update();
@@ -270,7 +291,7 @@
         function resetAnimation() {
             isPaused = false;
             pauseBtn.innerText = "暫停";
-            pauseBtn.className = "btn-secondary";
+            pauseBtn.className = "btn-pause";
             stickman = {
                 x: -50,
                 y: groundY,
@@ -280,9 +301,7 @@
             };
         }
 
-        window.onload = () => {
-            draw();
-        };
+        window.onload = draw;
     </script>
 </body>
 </html>
