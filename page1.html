@@ -3,55 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>同步問答系統 - 8位固定房號版</title>
+    <title>同步問答 - 穩定連線版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        /* (保留之前的 CSS 樣式) */
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #dfe6ed; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { font-family: sans-serif; background: #dfe6ed; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #teacher-ui, #student-ui { display: none; height: 100%; width: 100%; flex-direction: column; }
+        
+        /* 老師端界面 */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 1; padding: 5px; }
         .group-card { background: white; border-radius: 8px; border: 1px solid #ccc; display: flex; flex-direction: column; overflow: hidden; }
         .t-layout { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; background: #bbb; padding: 4px; flex: 1; }
-        .desk { background: white; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: #333; transition: background 0.2s; border: 1px solid #ddd; }
+        .desk { background: white; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: #333; }
+        
+        /* 顏色與統計 */
         .v-a { background: #e74c3c !important; color: white !important; }
         .v-b { background: #3498db !important; color: white !important; }
         .v-c { background: #2ecc71 !important; color: white !important; }
-        .stat-bar { background: #2c3e50; display: flex; height: 70px; align-items: stretch; }
+        .stat-bar { background: #2c3e50; display: flex; height: 70px; }
         .stat-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-        .stat-label { font-size: 11px; font-weight: bold; }
         .stat-num { font-size: 26px; font-weight: 900; }
-        .refresh-area { width: 90px; display: flex; align-items: center; justify-content: center; background: #34495e; }
-        .refresh-btn { background: #f1c40f; border: none; width: 70px; height: 50px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn { flex: 1; margin: 10px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: white; font-weight: bold; border: 6px solid transparent; }
-        .selected { border-color: rgba(255,255,255,0.8); transform: scale(0.95); }
-        .header-tag { background: #1a1a1a; color: #00d4ff; text-align: center; padding: 6px; font-size: 13px; font-family: monospace; }
+        .refresh-btn { background: #f1c40f; border: none; width: 80px; font-weight: bold; cursor: pointer; }
+
+        /* 學生端界面 */
+        .status-header { text-align: center; padding: 12px; font-weight: bold; background: #f1c40f; color: #333; transition: 0.5s; }
+        .btn { flex: 1; margin: 10px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: white; font-weight: bold; border: 6px solid transparent; opacity: 0.5; pointer-events: none; transition: 0.3s; }
+        .btn.ready { opacity: 1; pointer-events: auto; }
+        .selected { border-color: white; transform: scale(0.95); box-shadow: 0 0 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
     <div id="teacher-ui">
-        <div id="room-display" class="header-tag">正在啟動房間...</div>
+        <div id="room-info" style="background:#1a1a1a; color:#00d4ff; text-align:center; padding:5px; font-family:monospace;">啟動中...</div>
         <div class="grid" id="grid-box"></div>
         <div class="stat-bar">
-            <div class="stat-box v-a"><span class="stat-label">A</span><span id="count-a" class="stat-num">0</span></div>
-            <div class="stat-box v-b"><span class="stat-label">B</span><span id="count-b" class="stat-num">0</span></div>
-            <div class="stat-box v-c"><span class="stat-label">C</span><span id="count-c" class="stat-num">0</span></div>
-            <div class="refresh-area"><button class="refresh-btn" onclick="nextQuestion()">下一題</button></div>
+            <div class="stat-box v-a"><span style="font-size:10px">A</span><span id="count-a" class="stat-num">0</span></div>
+            <div class="stat-box v-b"><span style="font-size:10px">B</span><span id="count-b" class="stat-num">0</span></div>
+            <div class="stat-box v-c"><span style="font-size:10px">C</span><span id="count-c" class="stat-num">0</span></div>
+            <button class="refresh-btn" onclick="nextQuestion()">下一題</button>
         </div>
     </div>
 
     <div id="student-ui">
-        <div id="seat-display" style="text-align: center; padding: 10px; font-weight: bold; background: #eee;"></div>
+        <div id="status-tag" class="status-header">正在連線至老師端...</div>
         <button id="btn-a" class="btn v-a" onclick="studentVote('a')">A</button>
         <button id="btn-b" class="btn v-b" onclick="studentVote('b')">B</button>
         <button id="btn-c" class="btn v-c" onclick="studentVote('c')">C</button>
     </div>
 
     <script>
-        // 設定一個獨一無二的 8 位數房號（例如：你的生日 + 隨機數）
-        const FIXED_ROOM_ID = '20261024'; 
-        
-        let peer, connections = [];
+        const FIXED_ROOM_ID = '20261024'; // 你的 8 位數固定房號
+        let peer, studentConn, teacherConns = [];
         const urlParams = new URLSearchParams(window.location.search);
         const roomID = urlParams.get('room');
         const seatID = urlParams.get('seat');
@@ -64,17 +66,16 @@
             }
         };
 
+        // --- 老師端 ---
         function startTeacher() {
             peer = new Peer(FIXED_ROOM_ID);
             document.getElementById('teacher-ui').style.display = 'flex';
-            
             peer.on('open', (id) => {
-                document.getElementById('room-display').innerText = "房間已就緒: " + id;
+                document.getElementById('room-info').innerText = "房間已就緒: " + id;
                 renderGrid();
             });
-
             peer.on('connection', (conn) => {
-                connections.push(conn);
+                teacherConns.push(conn);
                 conn.on('data', (data) => {
                     if (data.type === 'vote') {
                         const el = document.getElementById('d-' + data.seat);
@@ -87,22 +88,19 @@
                     }
                 });
             });
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    alert("房號 " + FIXED_ROOM_ID + " 仍被佔用，請修改代碼中的 FIXED_ROOM_ID。");
-                }
-            });
         }
 
-        // 下一題廣播與重置
-        function nextQuestion() {
-            document.querySelectorAll('.desk').forEach(d => {
-                d.classList.remove('v-a', 'v-b', 'v-c');
-                d.innerText = d.id.replace('d-', '');
+        function renderGrid() {
+            const box = document.getElementById('grid-box');
+            const groups = ["G5", "G3", "G1", "G6", "G4", "G2"];
+            groups.forEach(g => {
+                let desks = `
+                    <div class="desk" id="d-${g}-4">${g}-4</div>
+                    <div class="desk" id="d-${g}-1">${g}-1</div>
+                    <div class="desk" id="d-${g}-3">${g}-3</div>
+                    <div class="desk" id="d-${g}-2">${g}-2</div>`;
+                box.innerHTML += `<div class="group-card"><div style="text-align:center;font-size:10px;padding:2px;color:#999">${g}</div><div class="t-layout">${desks}</div></div>`;
             });
-            updateStats();
-            connections.forEach(conn => { if (conn.open) conn.send({ type: 'reset' }); });
         }
 
         function updateStats() {
@@ -111,46 +109,60 @@
             document.getElementById('count-c').innerText = document.querySelectorAll('.grid .v-c').length;
         }
 
-        function renderGrid() {
-            const box = document.getElementById('grid-box');
-            box.innerHTML = '';
-            const groupsOrder = ["G5", "G3", "G1", "G6", "G4", "G2"];
-            groupsOrder.forEach(g => {
-                let desks = '';
-                // 順時針排序邏輯：右上(1), 右下(2), 左下(3), 左上(4)
-                desks += `<div class="desk" id="d-${g}-4">${g}-4</div>`;
-                desks += `<div class="desk" id="d-${g}-1">${g}-1</div>`;
-                desks += `<div class="desk" id="d-${g}-3">${g}-3</div>`;
-                desks += `<div class="desk" id="d-${g}-2">${g}-2</div>`;
-                box.innerHTML += `<div class="group-card"><div style="text-align:center;font-size:10px;padding:2px;background:#f8f8f8;color:#999">${g}</div><div class="t-layout">${desks}</div></div>`;
+        function nextQuestion() {
+            document.querySelectorAll('.desk').forEach(d => {
+                d.classList.remove('v-a', 'v-b', 'v-c');
+                d.innerText = d.id.replace('d-', '');
             });
+            updateStats();
+            teacherConns.forEach(c => { if (c.open) c.send({ type: 'reset' }); });
         }
 
+        // --- 學生端 ---
         function startStudent(r, s) {
             document.getElementById('student-ui').style.display = 'flex';
-            document.getElementById('seat-display').innerText = "座位: " + s + " (連線中...)";
-            peer = new Peer();
+            const tag = document.getElementById('status-tag');
+            
+            peer = new Peer(); 
             peer.on('open', () => {
-                const studentConn = peer.connect(r);
+                studentConn = peer.connect(r, { reliable: true }); // 強制可靠連線模式
+                
                 studentConn.on('open', () => {
-                    document.getElementById('seat-display').style.background = "#2ecc71";
-                    document.getElementById('seat-display').innerText = "座位: " + s + " (已連線)";
-                    // 保存連線以便投票
-                    window.currentConn = studentConn;
+                    tag.innerText = "座位 " + s + "：連線成功！";
+                    tag.style.background = "#2ecc71";
+                    tag.style.color = "white";
+                    // 激活按鈕
+                    document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
                 });
+
                 studentConn.on('data', (data) => {
                     if (data.type === 'reset') {
                         document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                     }
                 });
+
+                studentConn.on('close', () => {
+                    tag.innerText = "連線中斷，請重新整理頁面";
+                    tag.style.background = "#e74c3c";
+                    document.querySelectorAll('.btn').forEach(b => b.classList.remove('ready'));
+                });
+            });
+
+            peer.on('error', (err) => {
+                tag.innerText = "連線出錯，請確認房號是否正確";
+                tag.style.background = "#e74c3c";
             });
         }
 
         function studentVote(ans) {
-            if (window.currentConn && window.currentConn.open) {
+            if (studentConn && studentConn.open) {
                 document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
                 document.getElementById('btn-' + ans).classList.add('selected');
-                window.currentConn.send({ type: 'vote', seat: seatID, ans: ans });
+                studentConn.send({ type: 'vote', seat: seatID, ans: ans });
+                if (navigator.vibrate) navigator.vibrate(40);
+            } else {
+                alert("連線尚未就緒，請稍候再試");
             }
         }
     </script>
