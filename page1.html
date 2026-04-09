@@ -3,19 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>同步問答 - 穩定連線版</title>
+    <title>同步問答 - 穩定連線強化版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #dfe6ed; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #teacher-ui, #student-ui { display: none; height: 100%; width: 100%; flex-direction: column; }
-        
-        /* 老師端界面 */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 1; padding: 5px; }
         .group-card { background: white; border-radius: 8px; border: 1px solid #ccc; display: flex; flex-direction: column; overflow: hidden; }
         .t-layout { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; background: #bbb; padding: 4px; flex: 1; }
         .desk { background: white; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: #333; }
-        
-        /* 顏色與統計 */
         .v-a { background: #e74c3c !important; color: white !important; }
         .v-b { background: #3498db !important; color: white !important; }
         .v-c { background: #2ecc71 !important; color: white !important; }
@@ -23,8 +19,6 @@
         .stat-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
         .stat-num { font-size: 26px; font-weight: 900; }
         .refresh-btn { background: #f1c40f; border: none; width: 80px; font-weight: bold; cursor: pointer; }
-
-        /* 學生端界面 */
         .status-header { text-align: center; padding: 12px; font-weight: bold; background: #f1c40f; color: #333; transition: 0.5s; }
         .btn { flex: 1; margin: 10px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: white; font-weight: bold; border: 6px solid transparent; opacity: 0.5; pointer-events: none; transition: 0.3s; }
         .btn.ready { opacity: 1; pointer-events: auto; }
@@ -45,7 +39,7 @@
     </div>
 
     <div id="student-ui">
-        <div id="status-tag" class="status-header">正在連線至老師端...</div>
+        <div id="status-tag" class="status-header">準備連線...</div>
         <button id="btn-a" class="btn v-a" onclick="studentVote('a')">A</button>
         <button id="btn-b" class="btn v-b" onclick="studentVote('b')">B</button>
         <button id="btn-c" class="btn v-c" onclick="studentVote('c')">C</button>
@@ -66,9 +60,12 @@
             }
         };
 
-        // --- 老師端 ---
         function startTeacher() {
-            peer = new Peer(FIXED_ROOM_ID);
+            // 加入連線配置優化
+            peer = new Peer(FIXED_ROOM_ID, { 
+                debug: 1,
+                config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} 
+            });
             document.getElementById('teacher-ui').style.display = 'flex';
             peer.on('open', (id) => {
                 document.getElementById('room-info').innerText = "房間已就緒: " + id;
@@ -93,13 +90,11 @@
         function renderGrid() {
             const box = document.getElementById('grid-box');
             const groups = ["G5", "G3", "G1", "G6", "G4", "G2"];
-            box.innerHTML = ""; // 清空再生成
+            box.innerHTML = "";
             groups.forEach(g => {
                 let desks = `
-                    <div class="desk" id="d-${g}-4">${g}-4</div>
-                    <div class="desk" id="d-${g}-1">${g}-1</div>
-                    <div class="desk" id="d-${g}-3">${g}-3</div>
-                    <div class="desk" id="d-${g}-2">${g}-2</div>`;
+                    <div class="desk" id="d-${g}-4">${g}-4</div><div class="desk" id="d-${g}-1">${g}-1</div>
+                    <div class="desk" id="d-${g}-3">${g}-3</div><div class="desk" id="d-${g}-2">${g}-2</div>`;
                 box.innerHTML += `<div class="group-card"><div style="text-align:center;font-size:10px;padding:2px;color:#999">${g}</div><div class="t-layout">${desks}</div></div>`;
             });
         }
@@ -119,17 +114,28 @@
             teacherConns.forEach(c => { if (c.open) c.send({ type: 'reset' }); });
         }
 
-        // --- 學生端 (優化隨機延遲連線) ---
+        // --- 學生端：強化連線邏輯 ---
         function startStudent(r, s) {
             document.getElementById('student-ui').style.display = 'flex';
             const tag = document.getElementById('status-tag');
             
-            // 隨機延遲 0~3 秒發起連線，解決多人併發擁擠問題
-            const randomDelay = Math.floor(Math.random() * 3000);
-            tag.innerText = "排隊連線中，請稍候...";
+            // 隨機初始延遲 (100ms - 2500ms)
+            const initialDelay = Math.floor(Math.random() * 2400) + 100;
+            tag.innerText = "正在排隊連線...";
 
             setTimeout(() => {
-                peer = new Peer(); 
+                connectProcess();
+            }, initialDelay);
+
+            function connectProcess() {
+                // 每次嘗試建立新 Peer
+                if(peer) peer.destroy();
+                
+                peer = new Peer({ 
+                    debug: 1,
+                    config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} 
+                });
+
                 peer.on('open', () => {
                     studentConn = peer.connect(r, { reliable: true });
                     
@@ -140,25 +146,21 @@
                         document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
                     });
 
-                    studentConn.on('data', (data) => {
-                        if (data.type === 'reset') {
-                            document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
-                            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                        }
-                    });
-
                     studentConn.on('close', () => {
-                        tag.innerText = "連線中斷，請重新整理頁面";
-                        tag.style.background = "#e74c3c";
+                        tag.innerText = "連線中連，自動重試中...";
+                        tag.style.background = "#f39c12";
                         document.querySelectorAll('.btn').forEach(b => b.classList.remove('ready'));
+                        setTimeout(connectProcess, 2000);
                     });
                 });
 
                 peer.on('error', (err) => {
-                    tag.innerText = "連線失敗，請重整或更換房號";
-                    tag.style.background = "#e74c3c";
+                    console.log("PeerError:", err.type);
+                    tag.innerText = "伺服器忙碌，重試中...";
+                    // 遇到錯誤（如伺服器滿載）兩秒後重試
+                    setTimeout(connectProcess, 2000);
                 });
-            }, randomDelay);
+            }
         }
 
         function studentVote(ans) {
@@ -168,7 +170,7 @@
                 studentConn.send({ type: 'vote', seat: seatID, ans: ans });
                 if (navigator.vibrate) navigator.vibrate(40);
             } else {
-                alert("連線尚未就緒，請稍候再試");
+                alert("正在重新連線，請稍候...");
             }
         }
     </script>
