@@ -3,254 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>香港氣候分析 - 終極保險版</title>
+    <title>香港氣候分析 - 緊急修復版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F1F5F9; touch-action: manipulation; }
-        .main-card { background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 120px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; font-size: 1.5rem; }
-        .month-input { width: 65px; height: 45px; background: #F8FAFC; border-radius: 10px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .scroll-container { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; -webkit-overflow-scrolling: touch; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8FAFC; touch-action: manipulation; }
+        .main-card { background: white; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .year-input { border: none; border-bottom: 3px solid #EF4444; width: 100px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; font-size: 1.5rem; outline: none; }
+        .month-input { width: 60px; height: 40px; background: #F1F5F9; border-radius: 8px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .scroll-box { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 5px; }
     </style>
 </head>
-<body class="p-3 md:p-6">
+<body class="p-4">
 
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-4">
-        <div class="text-[10px] font-black tracking-widest text-slate-400">HK CLIMATE DATA TOOL</div>
-        <div class="flex items-center gap-3">
-            <div id="connectionStatus" class="bg-white px-3 py-1.5 rounded-full shadow-sm text-[11px] font-bold flex items-center border border-slate-100">
-                <span id="statusDot" class="status-dot bg-gray-400"></span>
-                <span id="statusText">正在連線...</span>
-            </div>
-            <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-bold">
-                <button id="modeS" class="bg-white px-3 py-1.5 rounded-lg shadow-sm">學生</button>
-                <button id="modeT" class="px-3 py-1.5 rounded-lg">老師 🔒</button>
-            </div>
+        <div class="text-xs font-black text-slate-400">HK CLIMATE DATA v3.0</div>
+        <div id="connectionStatus" class="bg-white px-3 py-1 rounded-full shadow-sm text-xs font-bold flex items-center">
+            <span id="statusDot" class="status-dot bg-gray-400"></span>
+            <span id="statusText">檢查連線...</span>
         </div>
     </div>
 
-    <div class="max-w-6xl mx-auto">
-        <div id="teacherView" class="hidden mb-6 bg-slate-900 rounded-[30px] p-6 text-white shadow-2xl border-4 border-blue-500/20">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-black flex items-center gap-2"><span class="text-blue-400">●</span> 全班監控看板</h2>
-                <button id="clearAllBtn" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black transition-all">重置數據庫</button>
-            </div>
-            <div id="monitorGrid" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
+    <div class="main-card p-6">
+        <div class="text-center mb-6">
+            <h1 class="text-xl font-black text-slate-800">
+                2025年與 <input type="number" id="yearInp" class="year-input" placeholder="____"> 年氣溫對比
+            </h1>
+            <div id="groupSelector" class="flex justify-center gap-2 mt-4 flex-wrap"></div>
         </div>
 
-        <div class="main-card p-5 md:p-10">
-            <div class="text-center mb-8">
-                <h1 class="text-xl md:text-2xl font-black text-slate-800 mb-6 flex items-center justify-center flex-wrap gap-2">
-                    2025年與 <input type="number" id="yearInp" class="year-input-box" placeholder="____"> 年氣溫對比
-                </h1>
-                <div id="groupSelector" class="scroll-container justify-start md:justify-center px-2"></div>
+        <div class="space-y-4 mb-6">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
+                <span class="font-bold text-slate-400 text-sm min-w-[70px]">2025對照</span>
+                <div class="scroll-box" id="refGrid"></div>
             </div>
+            <div id="inputBoxWrapper" class="p-3 rounded-xl border-2 flex items-center gap-3 transition-all">
+                <span id="groupLabel" class="font-bold text-sm min-w-[70px]">數據輸入</span>
+                <div class="scroll-box" id="inputGrid"></div>
+            </div>
+        </div>
 
-            <div id="studentInputArea" class="space-y-4 mb-8">
-                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row items-center gap-4">
-                    <span class="font-black text-slate-400 min-w-[100px] text-sm">2025年對照:</span>
-                    <div class="scroll-container w-full" id="refGrid"></div>
-                </div>
-                <div id="inputBoxWrapper" class="p-4 rounded-2xl border-4 flex flex-col md:flex-row items-center gap-4 transition-all">
-                    <span id="groupLabel" class="font-black min-w-[100px] text-sm">數據輸入:</span>
-                    <div class="scroll-container w-full" id="inputGrid"></div>
-                </div>
-            </div>
-
-            <div class="relative h-[450px] w-full bg-white rounded-xl">
-                <canvas id="mainChart"></canvas>
-            </div>
+        <div class="relative h-[400px] w-full">
+            <canvas id="mainChart"></canvas>
         </div>
     </div>
 
     <script>
-        const API = {
+        const CONFIG = {
             BIN: '69d739df36566621a892d521',
             KEY: '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu870',
             REF: [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2],
             COLORS: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
         };
 
-        let state = { gid: 0, isTeacher: false, groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) })) };
-        let saveTimeout = null;
+        let state = { gid: 0, groups: JSON.parse(localStorage.getItem('hk_climate_data')) || Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) })) };
 
-        // 圖表配置：修正 1月 貼邊與交叉點樣式
-        const chart = new Chart(document.getElementById('mainChart').getContext('2d'), {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
                 datasets: [
-                    { label: '2025年', data: API.REF, borderColor: '#CBD5E1', borderDash: [5,5], pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
+                    { label: '2025年', data: CONFIG.REF, borderColor: '#CBD5E1', borderDash: [5,5], pointStyle: 'crossRot', pointRadius: 6 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`, data: [], borderColor: API.COLORS[i], backgroundColor: API.COLORS[i],
-                        borderWidth: 3, pointStyle: 'crossRot', pointRadius: 8, tension: 0.1, hidden: true
+                        label: `第${i+1}組`, data: [], borderColor: CONFIG.COLORS[i], backgroundColor: CONFIG.COLORS[i],
+                        pointStyle: 'crossRot', pointRadius: 8, tension: 0.2, hidden: true
                     }))
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { 
-                    x: { offset: true, grid: { display: false } }, // 修正：讓1月向右移，不貼軸
-                    y: { min: 10, max: 40 } 
+                    x: { offset: true, grid: { display: false } }, // 核心修正：1月向右移，不貼邊
+                    y: { min: 10, max: 40 }
                 },
                 plugins: { legend: { labels: { usePointStyle: true } } }
             }
         });
 
         async function sync(isUpload = false) {
-            if (isUpload) setStatus('○ 同步中...', 'bg-blue-400');
+            localStorage.setItem('hk_climate_data', JSON.stringify(state.groups));
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+
             try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${API.BIN}/latest?t=${Date.now()}`, {
-                    headers: { 'X-Master-Key': API.KEY }, cache: 'no-store'
-                });
+                const url = isUpload ? `https://api.jsonbin.io/v3/b/${CONFIG.BIN}` : `https://api.jsonbin.io/v3/b/${CONFIG.BIN}/latest`;
+                const options = {
+                    method: isUpload ? 'PUT' : 'GET',
+                    headers: { 'X-Master-Key': CONFIG.KEY, 'Content-Type': 'application/json' }
+                };
+                if (isUpload) options.body = JSON.stringify({ groups: state.groups });
+
+                const res = await fetch(url, options);
                 if (!res.ok) throw new Error();
-                const d = await res.json();
-                let remoteGroups = d.record.groups;
-
-                if (isUpload) {
-                    remoteGroups[state.gid] = state.groups[state.gid];
-                    await fetch(`https://api.jsonbin.io/v3/b/${API.BIN}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API.KEY },
-                        body: JSON.stringify({ groups: remoteGroups })
-                    });
-                    setStatus('● 已儲存', 'bg-green-500');
-                } else {
-                    if (document.activeElement.tagName !== 'INPUT') {
-                        state.groups = remoteGroups;
-                        refreshUI();
-                    }
+                
+                if (!isUpload) {
+                    const d = await res.json();
+                    state.groups = d.record.groups || d.record;
                 }
-                setStatus('● 已同步', 'bg-green-500');
-            } catch (e) { 
-                setStatus('❌ 連線異常', 'bg-red-500');
-                // 斷線自動重連機制
-                setTimeout(() => sync(false), 5000); 
+                dot.className = 'status-dot bg-green-500';
+                txt.innerText = '連線正常';
+                refreshUI();
+            } catch (e) {
+                dot.className = 'status-dot bg-red-500';
+                txt.innerText = '本地模式 (連線異常)';
+                refreshUI();
             }
-        }
-
-        function setStatus(txt, cls) {
-            document.getElementById('statusText').innerText = txt;
-            document.getElementById('statusDot').className = 'status-dot ' + cls;
         }
 
         function refreshUI() {
             const current = state.groups[state.gid];
-            const color = API.COLORS[state.gid];
-
-            if (!state.isTeacher) {
-                const yInp = document.getElementById('yearInp');
-                if (document.activeElement !== yInp) yInp.value = current.year || '';
-                document.getElementById('groupLabel').innerText = (current.year || '____') + '年數據:';
-                document.getElementById('groupLabel').style.color = color;
-                document.getElementById('inputBoxWrapper').style.borderColor = color;
-                renderGrids();
-            }
-            renderGroupBtns();
-            renderMonitor();
-            updateChartOnly();
-        }
-
-        function renderGrids() {
-            const rg = document.getElementById('refGrid');
-            if (rg.innerHTML === '') {
-                API.REF.forEach((v, i) => rg.innerHTML += `<div class="text-center"><div class="text-[10px] font-bold text-slate-300">${i+1}月</div><div class="w-14 h-10 flex items-center justify-center bg-white rounded-lg text-xs border border-slate-100">${v}°</div></div>`);
-            }
+            document.getElementById('yearInp').value = current.year || '';
+            document.getElementById('groupLabel').innerText = (current.year || '____') + '年';
+            document.getElementById('groupLabel').style.color = CONFIG.COLORS[state.gid];
+            document.getElementById('inputBoxWrapper').style.borderColor = CONFIG.COLORS[state.gid];
+            
+            // 渲染輸入框
             const ig = document.getElementById('inputGrid');
             ig.innerHTML = '';
-            state.groups[state.gid].data.forEach((v, i) => {
-                ig.innerHTML += `<div class="text-center">
-                    <div class="text-[10px] font-bold" style="color:${API.COLORS[state.gid]}">${i+1}月</div>
-                    <input type="number" step="0.1" class="month-input" value="${v||''}" 
-                        oninput="handleInput(${i}, this.value)">
-                </div>`;
+            current.data.forEach((v, i) => {
+                ig.innerHTML += `<div class="text-center"><div class="text-[10px] font-bold text-slate-400">${i+1}月</div>
+                    <input type="number" step="0.1" class="month-input" value="${v||''}" oninput="updateData(${i}, this.value)"></div>`;
             });
-        }
 
-        function handleInput(index, val) {
-            state.groups[state.gid].data[index] = val === '' ? null : parseFloat(val);
-            updateChartOnly();
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => sync(true), 1500); 
-        }
-
-        function renderGroupBtns() {
-            const c = document.getElementById('groupSelector');
-            if (c.children.length === 0) {
-                state.groups.forEach((_, i) => {
-                    const b = document.createElement('button');
-                    b.innerText = `第 ${i+1} 組`;
-                    b.onclick = () => { state.gid = i; refreshUI(); sync(); };
-                    c.appendChild(b);
+            // 渲染對照組
+            const rg = document.getElementById('refGrid');
+            if (rg.innerHTML === '') {
+                CONFIG.REF.forEach((v, i) => {
+                    rg.innerHTML += `<div class="text-center"><div class="text-[10px] text-slate-300">${i+1}月</div><div class="text-xs font-bold">${v}</div></div>`;
                 });
             }
-            Array.from(c.children).forEach((b, i) => {
-                const active = (i === state.gid);
-                b.className = `flex-shrink-0 px-5 py-2 rounded-xl border-2 font-black text-sm transition-all`;
-                b.style.borderColor = API.COLORS[i];
-                b.style.backgroundColor = active ? API.COLORS[i] : 'transparent';
-                b.style.color = active ? 'white' : API.COLORS[i];
-            });
+
+            updateChart();
         }
 
-        function renderMonitor() {
-            const g = document.getElementById('monitorGrid');
-            if(!g) return; g.innerHTML = '';
-            state.groups.forEach((group, i) => {
-                const count = group.data.filter(d => d !== null).length;
-                g.innerHTML += `<div class="bg-white/10 p-3 rounded-2xl border border-white/5 text-center">
-                    <div class="text-[10px] font-black text-white/40 mb-1">組別 ${i+1}</div>
-                    <div class="text-sm font-black mb-1">${group.year || '未設年份'}</div>
-                    <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div class="h-full" style="width:${(count/12)*100}%; background-color:${API.COLORS[i]}"></div>
-                    </div></div>`;
-            });
+        function updateData(m, val) {
+            state.groups[state.gid].data[m] = val === '' ? null : parseFloat(val);
+            updateChart();
+            clearTimeout(window.saveTimer);
+            window.saveTimer = setTimeout(() => sync(true), 1000);
         }
 
-        function updateChartOnly() {
+        function updateChart() {
             chart.data.datasets.forEach((ds, i) => {
                 if (i === 0) return;
-                const gData = state.groups[i-1];
-                ds.data = gData.data;
-                ds.label = gData.year ? `${gData.year}年 (第${i}組)` : `第${i}組`;
-                ds.hidden = state.isTeacher ? false : (i-1 !== state.gid);
-                ds.pointStyle = 'crossRot'; // 確保數據點為交叉
+                ds.data = state.groups[i-1].data;
+                ds.hidden = (i-1 !== state.gid);
+                ds.pointStyle = 'crossRot';
             });
             chart.update('none');
         }
 
-        document.getElementById('modeT').onclick = () => {
-            const p = prompt("老師認證:");
-            if (p === "123456") {
-                state.isTeacher = true;
-                document.getElementById('teacherView').classList.remove('hidden');
-                document.getElementById('studentInputArea').classList.add('hidden');
-                document.getElementById('modeT').classList.add('bg-white', 'shadow-sm');
-                document.getElementById('modeS').classList.remove('bg-white', 'shadow-sm');
+        // 初始化組別按鈕
+        const gs = document.getElementById('groupSelector');
+        CONFIG.COLORS.forEach((color, i) => {
+            const btn = document.createElement('button');
+            btn.innerText = `第 ${i+1} 組`;
+            btn.className = 'px-4 py-1 rounded-lg text-sm font-bold border-2';
+            btn.style.borderColor = color;
+            btn.style.color = color;
+            btn.onclick = () => {
+                state.gid = i;
+                document.querySelectorAll('#groupSelector button').forEach(b => b.style.background = 'transparent');
+                document.querySelectorAll('#groupSelector button').forEach((b,idx) => b.style.color = CONFIG.COLORS[idx]);
+                btn.style.background = color;
+                btn.style.color = 'white';
                 refreshUI();
-                setInterval(() => sync(false), 3000); 
-            }
-        };
-
-        document.getElementById('clearAllBtn').onclick = async () => {
-            if (!confirm("確定要重置所有組別的數據嗎？")) return;
-            state.groups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
-            await sync(true);
-            refreshUI();
-        };
+            };
+            if(i === 0) { btn.style.background = color; btn.style.color = 'white'; }
+            gs.appendChild(btn);
+        });
 
         document.getElementById('yearInp').oninput = (e) => {
             state.groups[state.gid].year = e.target.value;
-            document.getElementById('groupLabel').innerText = (e.target.value || '____') + '年數據:';
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => sync(true), 1500);
+            refreshUI();
+            sync(true);
         };
 
         sync();
-        setInterval(() => { if(!state.isTeacher && document.activeElement.tagName !== 'INPUT') sync(false); }, 15000);
+        setInterval(() => sync(false), 15000); // 每15秒檢查一次連線
     </script>
 </body>
 </html>
