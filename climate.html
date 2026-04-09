@@ -111,9 +111,9 @@
             data: {
                 labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
                 datasets: [
-                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointStyle: 'circle', pointRadius: 4, tension: 0.1 },
+                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`, data: new Array(12).fill(null), borderColor: COLORS[i], borderWidth: 3, pointStyle: 'circle', pointRadius: 5, pointBackgroundColor: COLORS[i], tension: 0.1, hidden: true
+                        label: `第${i+1}組`, data: new Array(12).fill(null), borderColor: COLORS[i], borderWidth: 3, pointStyle: 'crossRot', pointRadius: 6, pointBackgroundColor: COLORS[i], tension: 0.1, hidden: true
                     }))
                 ]
             },
@@ -150,7 +150,7 @@
                         body: JSON.stringify(latestGroups)
                     });
                     document.getElementById('syncStatus').innerText = '● 已儲存到雲端';
-                    updateChart(); // 儲存後立即刷新圖表
+                    updateChart();
                 } catch (e) { document.getElementById('syncStatus').innerText = '❌ 儲存失敗'; }
             }, 800); 
         }
@@ -244,13 +244,8 @@
                     const groupData = state.groups[i-1];
                     ds.data = [...groupData.data]; 
                     ds.label = (groupData.year ? groupData.year + "年" : `第${i}組`);
-                    
-                    if (state.isTeacher) {
-                        ds.hidden = !state.visibleGroups[i-1];
-                    } else {
-                        // 學生模式：只顯示目前選中的組別
-                        ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
-                    }
+                    if (state.isTeacher) ds.hidden = !state.visibleGroups[i-1];
+                    else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
                 }
             });
             chart.update('none'); 
@@ -273,18 +268,24 @@
             }
         };
 
+        // --- 修正閃回問題的清空鍵 ---
         document.getElementById('btnClearData').onclick = async () => {
             if (confirm('確定要清空所有組別的輸入內容嗎？')) {
+                clearTimeout(debounceTimer); // 立即停止任何正在進行的自動儲存
                 const emptyData = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
+                document.getElementById('syncStatus').innerText = '○ 正在同步清空...';
+                
                 try {
                     await fetch(API_URL, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
                         body: JSON.stringify(emptyData)
                     });
+                    // 強制更新本地狀態，確保不會閃回
                     state.groups = emptyData;
+                    document.getElementById('syncStatus').innerText = '● 數據已完全重置';
                     syncUI();
-                } catch (e) { alert('清空失敗'); }
+                } catch (e) { alert('清空失敗，請檢查連線'); }
             }
         };
 
