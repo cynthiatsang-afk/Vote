@@ -8,110 +8,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-        
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #F8FAFC;
-            color: #1E293B;
-            overflow-x: hidden;
-        }
-
-        .main-card {
-            background: white;
-            border-radius: 40px;
-            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.05);
-        }
-
-        .teacher-monitor {
-            background: #1E293B;
-            border-radius: 30px;
-            padding: 24px;
-            color: white;
-            margin-bottom: 24px;
-        }
-
-        .color-g1 { color: #EF4444; } .bg-g1 { background-color: #EF4444; }
-        .color-g2 { color: #3B82F6; } .bg-g2 { background-color: #3B82F6; }
-        .color-g3 { color: #10B981; } .bg-g3 { background-color: #10B981; }
-        .color-g4 { color: #F59E0B; } .bg-g4 { background-color: #F59E0B; }
-        .color-g5 { color: #8B5CF6; } .bg-g5 { background-color: #8B5CF6; }
-        .color-g6 { color: #06B6D4; } .bg-g6 { background-color: #06B6D4; }
-
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8FAFC; color: #1E293B; overflow-x: hidden; }
+        .main-card { background: white; border-radius: 40px; box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.05); }
+        .teacher-monitor { background: #1E293B; border-radius: 30px; padding: 24px; color: white; margin-bottom: 24px; }
         .progress-bar-bg { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 6px; }
-
-        .year-input-box {
-            border: none;
-            border-bottom: 3px solid #EF4444;
-            width: 90px;
-            background: transparent;
-            color: #EF4444;
-            text-align: center;
-            font-weight: 900;
-            outline: none;
-            padding: 0;
-            margin: 0 8px;
-            -moz-appearance: textfield;
-        }
-
-        .scroll-x-container {
-            display: flex;
-            overflow-x: auto;
-            gap: 12px;
-            padding-bottom: 12px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .month-input {
-            width: 60px;
-            height: 38px;
-            background: white;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 500;
-            border: 1px solid #E2E8F0;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
-            transition: all 0.2s;
-        }
-        .month-input:focus {
-            outline: none;
-            border-color: #3B82F6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .month-display {
-            width: 60px;
-            height: 38px;
-            background: #F8FAFC;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: #64748B;
-            border: 1px solid #F1F5F9;
-        }
-
+        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 90px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; margin: 0 8px; }
+        .scroll-x-container { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 12px; }
+        .month-input { width: 60px; height: 38px; background: white; border-radius: 8px; text-align: center; font-weight: 500; border: 1px solid #E2E8F0; transition: all 0.2s; }
+        .month-input:focus { outline: none; border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        .month-display { width: 60px; height: 38px; background: #F8FAFC; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #64748B; border: 1px solid #F1F5F9; }
         .btn-mode-toggle { background: #E2E8F0; padding: 4px; border-radius: 14px; }
         .btn-mode-toggle button { padding: 6px 20px; border-radius: 10px; font-weight: bold; }
         .btn-mode-toggle button.active { background: white; color: #1E293B; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
         #authModal { display: none; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); }
-
-        .rect-icon {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            display: inline-block;
-        }
+        .rect-icon { width: 18px; height: 18px; border-radius: 4px; display: inline-block; }
     </style>
 </head>
 <body class="p-4">
 
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-6">
-        <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase">
-            CLIMATE ANALYSIS TOOL
-        </div>
+        <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase">CLIMATE ANALYSIS TOOL</div>
         <div class="flex items-center gap-3">
+            <div id="syncStatus" class="text-[10px] font-bold text-slate-400 italic">正在檢查同步...</div>
             <div class="btn-mode-toggle flex text-sm">
                 <button id="btnStudent" class="active">學生</button>
                 <button id="btnTeacher">老師 🔒</button>
@@ -120,29 +38,22 @@
     </div>
 
     <div class="max-w-6xl mx-auto">
-        <!-- 老師面板 -->
         <div id="teacherDashboard" class="hidden teacher-monitor">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black">組別進度與數據同步</h2>
-            </div>
+            <h2 class="text-xl font-black mb-6">組別實時進度 (每5秒更新)</h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="monitorGrid"></div>
         </div>
 
-        <!-- 主工作區 -->
         <div class="main-card p-6 md:p-12 text-center">
-            <!-- 動態標題區域 -->
             <h1 id="mainTitle" class="text-2xl md:text-4xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap">
                 <span id="titlePrefix">2025年與</span>
                 <input type="number" id="yearInput" class="year-input-box" placeholder="____">
                 <span id="titleSuffix">年香港各月溫度變化比較</span>
             </h1>
 
-            <!-- 組別切換按鈕 -->
             <div id="groupButtonsContainer" class="mb-10">
                 <div id="groupButtons" class="scroll-x-container justify-start md:justify-center"></div>
             </div>
 
-            <!-- 數據輸入區 -->
             <div id="dataInputArea" class="space-y-6 mb-8 text-left">
                 <div class="flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-[25px] border border-slate-100">
                     <div class="flex items-center gap-3 min-w-[180px]">
@@ -150,9 +61,7 @@
                         <span class="text-slate-500 font-black text-base whitespace-nowrap">2025年對照數據</span>
                         <input type="checkbox" checked id="toggleRef" class="w-5 h-5 accent-slate-400">
                     </div>
-                    <div class="flex-1 w-full overflow-hidden">
-                        <div class="scroll-x-container" id="refDataGrid"></div>
-                    </div>
+                    <div class="flex-1 w-full overflow-hidden"><div class="scroll-x-container" id="refDataGrid"></div></div>
                 </div>
 
                 <div class="flex flex-col md:flex-row items-center gap-4 p-4 rounded-[25px] border transition-colors" id="inputSectionWrapper">
@@ -161,20 +70,16 @@
                         <span id="inputLabelYear" class="font-black text-base underline decoration-2 whitespace-nowrap">_______年輸入</span>
                         <input type="checkbox" checked id="toggleUser" class="w-5 h-5">
                     </div>
-                    <div class="flex-1 w-full overflow-hidden">
-                        <div class="scroll-x-container" id="inputDataGrid"></div>
-                    </div>
+                    <div class="flex-1 w-full overflow-hidden"><div class="scroll-x-container" id="inputDataGrid"></div></div>
                 </div>
             </div>
 
-            <!-- 圖表區域 (保留橫軸月份標記) -->
             <div class="relative h-[650px] w-full bg-white rounded-2xl border border-slate-50 p-2 pb-14">
                 <canvas id="tempChart"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- 驗證彈窗 -->
     <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 max-w-xs w-full shadow-2xl text-center">
             <h3 class="text-xl font-black mb-2 text-slate-800">老師身分驗證</h3>
@@ -187,89 +92,74 @@
     </div>
 
     <script>
+        // --- Jsonbin 設定 ---
+        const BIN_ID = '69d72640aaba882197db886d';
+        const MASTER_KEY = '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu87O';
+        const API_URL = `https://api.jsonbin.io/v3/b/${69d72640aaba882197db886d}`;
+
         const REF_TEMPS = [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2];
         const COLORS = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4'];
         
         let state = {
             isTeacher: false,
             activeGroup: 0,
-            visibleGroups: new Array(6).fill(false),
+            visibleGroups: new Array(6).fill(true),
             groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }))
         };
 
+        // --- 初始化圖表 ---
         const ctx = document.getElementById('tempChart').getContext('2d');
         let chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
                 datasets: [
-                    {
-                        label: '2025年',
-                        data: REF_TEMPS,
-                        borderColor: '#CBD5E1',
-                        borderWidth: 2,
-                        pointStyle: 'crossRot',
-                        pointRadius: 6,
-                        tension: 0.1
-                    },
+                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`,
-                        data: new Array(12).fill(null),
-                        borderColor: COLORS[i],
-                        borderWidth: 3,
-                        pointStyle: 'crossRot',
-                        pointRadius: 6,
-                        pointBackgroundColor: COLORS[i],
-                        tension: 0.1,
-                        hidden: true
+                        label: `第${i+1}組`, data: new Array(12).fill(null), borderColor: COLORS[i], borderWidth: 3, pointStyle: 'crossRot', pointRadius: 6, pointBackgroundColor: COLORS[i], tension: 0.1, hidden: true
                     }))
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { 
-                        display: true, 
-                        position: 'top', 
-                        labels: { usePointStyle: true, font: { weight: 'bold', size: 12 } } 
-                    }
-                },
-                scales: { 
-                    y: { 
-                        min: 10, 
-                        max: 40, 
-                        ticks: {
-                            stepSize: 5,
-                            font: { weight: 'bold' }
-                        },
-                        title: { display: true, text: '溫度 (°C)', font: { weight: 'bold' } } 
-                    },
-                    x: { 
-                        display: true,
-                        offset: true,
-                        grid: { display: false },
-                        ticks: { 
-                            display: true,
-                            font: { weight: 'bold', size: 13 },
-                            color: '#475569'
-                        },
-                        title: {
-                            display: true,
-                            text: '月份',
-                            font: { weight: 'bold', size: 14 },
-                            padding: { top: 10 }
-                        }
-                    }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40 } } }
         });
+
+        // --- 同步邏輯 ---
+
+        // 從雲端抓取最新數據
+        async function fetchCloudData() {
+            try {
+                const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
+                const json = await res.json();
+                state.groups = json.record;
+                document.getElementById('syncStatus').innerText = '● 雲端同步中';
+                document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
+                syncUI();
+            } catch (e) { console.error('抓取失敗', e); }
+        }
+
+        // 上傳數據到雲端 (防抖處理，避免過於頻繁請求)
+        let debounceTimer;
+        function pushCloudData() {
+            document.getElementById('syncStatus').innerText = '○ 正在儲存...';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                try {
+                    await fetch(API_URL, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+                        body: JSON.stringify(state.groups)
+                    });
+                    document.getElementById('syncStatus').innerText = '● 已儲存到雲端';
+                } catch (e) { console.error('儲存失敗', e); }
+            }, 1000); 
+        }
+
+        // --- UI 控制 ---
 
         function syncUI() {
             const currentGroup = state.groups[state.activeGroup];
             const color = COLORS[state.activeGroup];
             
-            // 處理主標題切換
             const mainTitle = document.getElementById('mainTitle');
             if (state.isTeacher) {
                 mainTitle.innerHTML = '過去40年香港各月溫度的變化';
@@ -277,40 +167,24 @@
                 document.getElementById('dataInputArea').style.display = 'none';
                 document.getElementById('groupButtonsContainer').style.display = 'none';
             } else {
-                mainTitle.innerHTML = `
-                    <span id="titlePrefix">2025年與</span>
-                    <input type="number" id="yearInput" class="year-input-box" value="${currentGroup.year}" placeholder="____">
-                    <span id="titleSuffix">年香港各月溫度變化比較</span>
-                `;
-                // 重新綁定事件，因為 innerHTML 會移除舊的
+                mainTitle.innerHTML = `2025年與 <input type="number" id="yearInput" class="year-input-box" value="${currentGroup.year}" placeholder="____"> 年香港各月溫度變化比較`;
                 document.getElementById('yearInput').oninput = (e) => {
                     state.groups[state.activeGroup].year = e.target.value;
-                    document.getElementById('inputLabelYear').innerText = `${e.target.value || '_______'}年輸入`;
-                    updateChart();
-                    renderMonitor();
+                    pushCloudData();
                 };
-                
                 document.getElementById('teacherDashboard').classList.add('hidden');
                 document.getElementById('dataInputArea').style.display = 'block';
                 document.getElementById('groupButtonsContainer').style.display = 'block';
             }
 
             const wrapper = document.getElementById('inputSectionWrapper');
-            const rect = document.getElementById('groupRectIcon');
-            const label = document.getElementById('inputLabelYear');
-            const chk = document.getElementById('toggleUser');
-
             if (!state.isTeacher) {
-                wrapper.style.backgroundColor = `${color}08`;
-                wrapper.style.borderColor = `${color}20`;
-                rect.style.backgroundColor = color;
-                label.style.color = color;
-                label.style.textDecorationColor = color;
-                chk.style.accentColor = color;
+                wrapper.style.borderColor = color;
+                document.getElementById('groupRectIcon').style.backgroundColor = color;
+                document.getElementById('inputLabelYear').style.color = color;
                 renderGrids();
                 renderGroupBtns();
             }
-
             renderMonitor();
             updateChart();
         }
@@ -324,37 +198,28 @@
                     <div class="bg-white/5 p-3 rounded-2xl border border-white/10">
                         <div class="flex justify-between items-start mb-2">
                             <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background-color:${COLORS[i]}">G${i+1}</span>
-                            <input type="checkbox" class="w-5 h-5 accent-white" ${state.visibleGroups[i] ? 'checked' : ''} onchange="state.visibleGroups[${i}]=this.checked; updateChart();">
+                            <input type="checkbox" ${state.visibleGroups[i] ? 'checked' : ''} onchange="state.visibleGroups[${i}]=this.checked; updateChart();">
                         </div>
-                        <div class="text-[10px] opacity-60 mb-2 truncate">${g.year ? g.year + '年' : '無年份'}</div>
-                        <div class="progress-bar-bg"><div class="h-full rounded-full transition-all" style="width:${(filled/12*100)}%; background-color:${COLORS[i]}"></div></div>
-                    </div>
-                `;
+                        <div class="text-[10px] opacity-60 mb-2">${g.year ? g.year + '年' : '未輸入'}</div>
+                        <div class="progress-bar-bg"><div class="h-full rounded-full" style="width:${(filled/12*100)}%; background-color:${COLORS[i]}"></div></div>
+                    </div>`;
             });
         }
 
         function renderGrids() {
             const refGrid = document.getElementById('refDataGrid');
             const inputGrid = document.getElementById('inputDataGrid');
-            
             if (!refGrid.children.length) {
                 REF_TEMPS.forEach((t, i) => {
-                    refGrid.innerHTML += `
-                        <div class="flex flex-col items-center">
-                            <span class="text-[11px] font-bold text-slate-400 mb-1">${i+1}月</span>
-                            <div class="month-display">${t}°</div>
-                        </div>`;
+                    refGrid.innerHTML += `<div class="flex flex-col items-center"><span class="text-[11px] font-bold text-slate-400 mb-1">${i+1}月</span><div class="month-display">${t}°</div></div>`;
                 });
             }
-
             inputGrid.innerHTML = '';
             state.groups[state.activeGroup].data.forEach((val, i) => {
-                inputGrid.innerHTML += `
-                    <div class="flex flex-col items-center">
-                        <span class="text-[11px] font-bold mb-1" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
-                        <input type="number" step="0.1" class="month-input" value="${val||''}" oninput="state.groups[state.activeGroup].data[${i}]=parseFloat(this.value)||null; updateChart(); renderMonitor();">
-                    </div>
-                `;
+                inputGrid.innerHTML += `<div class="flex flex-col items-center">
+                    <span class="text-[11px] font-bold mb-1" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
+                    <input type="number" step="0.1" class="month-input" value="${val||''}" oninput="state.groups[state.activeGroup].data[${i}]=parseFloat(this.value)||null; pushCloudData();">
+                </div>`;
             });
             document.getElementById('inputLabelYear').innerText = `${state.groups[state.activeGroup].year || '_______'}年輸入`;
         }
@@ -364,54 +229,40 @@
             container.innerHTML = '';
             state.groups.forEach((_, i) => {
                 const active = i === state.activeGroup;
-                container.innerHTML += `
-                    <button onclick="state.activeGroup=${i}; syncUI();" class="flex-shrink-0 px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm flex items-center gap-2" 
-                    style="border-color:${active ? COLORS[i] : '#F1F5F9'}; background-color:${active ? COLORS[i] : 'white'}; color:${active ? 'white' : '#94A3B8'}">
-                        <span class="w-2 h-2 rounded-full" style="background:${active?'white':COLORS[i]}"></span> 第${['一','二','三','四','五','六'][i]}組
-                    </button>
-                `;
+                container.innerHTML += `<button onclick="state.activeGroup=${i}; syncUI();" class="flex-shrink-0 px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm" 
+                    style="border-color:${active ? COLORS[i] : '#F1F5F9'}; background-color:${active ? COLORS[i] : 'white'}; color:${active ? 'white' : '#94A3B8'}">第${['一','二','三','四','五','六'][i]}組</button>`;
             });
         }
 
         function updateChart() {
-            if (!state.isTeacher) {
-                chart.data.datasets.forEach((ds, i) => {
-                    if (i === 0) ds.hidden = !document.getElementById('toggleRef').checked;
-                    else if (i === state.activeGroup + 1) {
-                        ds.data = state.groups[state.activeGroup].data;
-                        ds.label = (state.groups[state.activeGroup].year || "輸入") + "年";
-                        ds.hidden = !document.getElementById('toggleUser').checked;
-                    } else ds.hidden = true;
-                });
-            } else {
-                chart.data.datasets[0].hidden = false;
-                chart.data.datasets[0].label = "2025年";
-                state.visibleGroups.forEach((v, i) => {
-                    chart.data.datasets[i+1].data = state.groups[i].data;
-                    chart.data.datasets[i+1].label = `第${i+1}組 (${state.groups[i].year || '未填'}年)`;
-                    chart.data.datasets[i+1].hidden = !v;
-                });
-            }
+            chart.data.datasets.forEach((ds, i) => {
+                if (i === 0) ds.hidden = !document.getElementById('toggleRef').checked;
+                else {
+                    ds.data = state.groups[i-1].data;
+                    ds.label = (state.groups[i-1].year || `第${i}組`) + "年";
+                    if (state.isTeacher) ds.hidden = !state.visibleGroups[i-1];
+                    else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
+                }
+            });
             chart.update();
         }
 
-        document.getElementById('btnTeacher').onclick = () => { if(!state.isTeacher) document.getElementById('authModal').style.display='flex'; };
+        // --- 事件綁定 ---
+        document.getElementById('btnTeacher').onclick = () => document.getElementById('authModal').style.display='flex';
         document.getElementById('btnStudent').onclick = () => { state.isTeacher=false; document.getElementById('btnStudent').classList.add('active'); document.getElementById('btnTeacher').classList.remove('active'); syncUI(); };
         document.getElementById('cancelAuth').onclick = () => document.getElementById('authModal').style.display='none';
         document.getElementById('confirmAuth').onclick = () => {
             if(document.getElementById('passField').value === "123456") {
-                state.isTeacher = true;
-                document.getElementById('authModal').style.display='none';
-                document.getElementById('btnTeacher').classList.add('active');
-                document.getElementById('btnStudent').classList.remove('active');
+                state.isTeacher = true; document.getElementById('authModal').style.display='none';
+                document.getElementById('btnTeacher').classList.add('active'); document.getElementById('btnStudent').classList.remove('active');
                 syncUI();
+                // 老師模式下，每5秒抓一次最新數據
+                setInterval(fetchCloudData, 5000);
             }
         };
 
-        document.getElementById('toggleRef').onchange = updateChart;
-        document.getElementById('toggleUser').onchange = updateChart;
-
-        syncUI();
+        // 啟動加載
+        fetchCloudData();
     </script>
 </body>
 </html>
