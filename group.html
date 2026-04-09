@@ -96,10 +96,23 @@
                 maintainAspectRatio: false,
                 scales: { 
                     x: { 
-                        offset: true, // 核心修正：讓數據點向右移，不貼在Y軸線上
-                        grid: { display: false } 
+                        offset: true,
+                        grid: { display: false },
+                        title: {
+                            display: true,
+                            text: '月份',
+                            font: { size: 14, weight: 'bold' }
+                        }
                     },
-                    y: { min: 10, max: 40 }
+                    y: { 
+                        min: 10, 
+                        max: 40,
+                        title: {
+                            display: true,
+                            text: '溫度 (°C)',
+                            font: { size: 14, weight: 'bold' }
+                        }
+                    }
                 },
                 plugins: { 
                     legend: { labels: { usePointStyle: true } } 
@@ -112,15 +125,11 @@
             const current = state.groups[state.gid];
             const color = CONFIG.COLORS[state.gid];
 
-            // 更新年份輸入框
             document.getElementById('yearInp').value = current.year || '';
-            
-            // 更新輸入區域樣式
             document.getElementById('groupLabel').innerText = (current.year || '____') + '年';
             document.getElementById('groupLabel').style.color = color;
             document.getElementById('inputBoxWrapper').style.borderColor = color;
 
-            // 渲染2025對照數據 (只渲染一次)
             const rg = document.getElementById('refGrid');
             if (rg.innerHTML === '') {
                 CONFIG.REF.forEach((v, i) => {
@@ -128,7 +137,6 @@
                 });
             }
 
-            // 渲染學生輸入框
             const ig = document.getElementById('inputGrid');
             ig.innerHTML = '';
             current.data.forEach((v, i) => {
@@ -144,26 +152,23 @@
             localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
         }
 
-        // 更新數據
         function updateVal(index, val) {
             state.groups[state.gid].data[index] = val === '' ? null : parseFloat(val);
             updateChart();
             localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
         }
 
-        // 更新圖表
         function updateChart() {
             chart.data.datasets.forEach((ds, i) => {
                 if (i === 0) return;
                 ds.data = state.groups[i-1].data;
                 ds.label = state.groups[i-1].year ? `${state.groups[i-1].year}年 (第${i}組)` : `第${i}組`;
-                ds.hidden = (i-1 !== state.gid); // 只顯示當前選中組別
-                ds.pointStyle = 'crossRot'; // 確保為交叉點
+                ds.hidden = (i-1 !== state.gid);
+                ds.pointStyle = 'crossRot';
             });
             chart.update('none');
         }
 
-        // 初始化組別按鈕
         const gs = document.getElementById('groupSelector');
         CONFIG.COLORS.forEach((color, i) => {
             const btn = document.createElement('button');
@@ -188,7 +193,6 @@
             gs.appendChild(btn);
         });
 
-        // 年份輸入事件
         document.getElementById('yearInp').oninput = (e) => {
             state.groups[state.gid].year = e.target.value;
             document.getElementById('groupLabel').innerText = (e.target.value || '____') + '年';
@@ -196,7 +200,6 @@
             localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
         };
 
-        // 重設功能
         function resetAll() {
             if(confirm('確定要清空所有組別的數據嗎？')) {
                 localStorage.removeItem('hk_local_climate');
@@ -204,7 +207,6 @@
             }
         }
 
-        // 啟動
         refreshUI();
     </script>
 </body>
