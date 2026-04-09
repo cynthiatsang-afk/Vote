@@ -52,7 +52,7 @@
     </div>
 
     <script>
-        const FIXED_ROOM_ID = '21090328'; // 你的 8 位數固定房號
+        const FIXED_ROOM_ID = '21090328'; 
         let peer, studentConn, teacherConns = [];
         const urlParams = new URLSearchParams(window.location.search);
         const roomID = urlParams.get('room');
@@ -93,6 +93,7 @@
         function renderGrid() {
             const box = document.getElementById('grid-box');
             const groups = ["G5", "G3", "G1", "G6", "G4", "G2"];
+            box.innerHTML = ""; // 清空再生成
             groups.forEach(g => {
                 let desks = `
                     <div class="desk" id="d-${g}-4">${g}-4</div>
@@ -118,41 +119,46 @@
             teacherConns.forEach(c => { if (c.open) c.send({ type: 'reset' }); });
         }
 
-        // --- 學生端 ---
+        // --- 學生端 (優化隨機延遲連線) ---
         function startStudent(r, s) {
             document.getElementById('student-ui').style.display = 'flex';
             const tag = document.getElementById('status-tag');
             
-            peer = new Peer(); 
-            peer.on('open', () => {
-                studentConn = peer.connect(r, { reliable: true }); // 強制可靠連線模式
-                
-                studentConn.on('open', () => {
-                    tag.innerText = "座位 " + s + "：連線成功！";
-                    tag.style.background = "#2ecc71";
-                    tag.style.color = "white";
-                    // 激活按鈕
-                    document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
+            // 隨機延遲 0~3 秒發起連線，解決多人併發擁擠問題
+            const randomDelay = Math.floor(Math.random() * 3000);
+            tag.innerText = "排隊連線中，請稍候...";
+
+            setTimeout(() => {
+                peer = new Peer(); 
+                peer.on('open', () => {
+                    studentConn = peer.connect(r, { reliable: true });
+                    
+                    studentConn.on('open', () => {
+                        tag.innerText = "座位 " + s + "：連線成功！";
+                        tag.style.background = "#2ecc71";
+                        tag.style.color = "white";
+                        document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
+                    });
+
+                    studentConn.on('data', (data) => {
+                        if (data.type === 'reset') {
+                            document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+                        }
+                    });
+
+                    studentConn.on('close', () => {
+                        tag.innerText = "連線中斷，請重新整理頁面";
+                        tag.style.background = "#e74c3c";
+                        document.querySelectorAll('.btn').forEach(b => b.classList.remove('ready'));
+                    });
                 });
 
-                studentConn.on('data', (data) => {
-                    if (data.type === 'reset') {
-                        document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
-                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                    }
-                });
-
-                studentConn.on('close', () => {
-                    tag.innerText = "連線中斷，請重新整理頁面";
+                peer.on('error', (err) => {
+                    tag.innerText = "連線失敗，請重整或更換房號";
                     tag.style.background = "#e74c3c";
-                    document.querySelectorAll('.btn').forEach(b => b.classList.remove('ready'));
                 });
-            });
-
-            peer.on('error', (err) => {
-                tag.innerText = "連線出錯，請確認房號是否正確";
-                tag.style.background = "#e74c3c";
-            });
+            }, randomDelay);
         }
 
         function studentVote(ans) {
