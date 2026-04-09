@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港氣候分析 - 老師歷史對比模式</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #0F172A; color: white; }
+        .admin-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        .group-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #3B82F6; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight">過去40年香港各月溫度的變化</h1>
+                <p class="text-slate-400 text-sm mt-1">預載數據：1985 (G1,2) | 1995 (G3,4) | 2005 (G5,6) | 2025 (Ref)</p>
+            </div>
+            <div class="bg-blue-500/20 text-blue-400 px-4 py-1.5 rounded-full text-xs font-black border border-blue-500/30">
+                TEACHER MODE
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 space-y-4">
+                <div class="admin-card p-6">
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-5">組別顯示控制</h2>
+                    <div id="controls" class="space-y-3">
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                            <label class="flex items-center gap-3">
+                                <input type="checkbox" checked disabled class="group-checkbox opacity-50">
+                                <span class="font-bold text-slate-400 text-sm">2025年 (參考)</span>
+                            </label>
+                            <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+                        </div>
+                        </div>
+                </div>
+
+                <div class="admin-card p-4">
+                    <button onclick="location.reload()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-black transition-all border border-white/5">
+                        恢復預設視圖
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <div class="admin-card p-6 h-[600px] flex flex-col">
+                    <div class="relative flex-grow">
+                        <canvas id="teacherChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CLIMATE_DATA = {
+            LABELS: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+            REF_2025: [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2],
+            // 香港天文台歷史平均氣溫數據
+            Y1985: [14.4, 15.6, 17.7, 21.9, 25.2, 27.6, 28.4, 28.7, 28.7, 26.4, 21.8, 17.2],
+            Y1995: [15.2, 16.5, 19.1, 22.8, 26.1, 28.2, 29.1, 28.8, 28.5, 26.9, 22.5, 18.1],
+            Y2005: [15.8, 17.1, 19.8, 23.4, 26.8, 28.5, 29.3, 28.9, 29.0, 27.2, 23.0, 18.9],
+            COLORS: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
+        };
+
+        const ctx = document.getElementById('teacherChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: CLIMATE_DATA.LABELS,
+                datasets: [
+                    {
+                        label: '2025年',
+                        data: CLIMATE_DATA.REF_2025,
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderDash: [5, 5],
+                        pointStyle: 'crossRot',
+                        pointRadius: 6,
+                        tension: 0.3
+                    },
+                    ...Array.from({length: 6}, (_, i) => {
+                        let year = '';
+                        let data = [];
+                        if (i < 2) { year = '1985'; data = CLIMATE_DATA.Y1985; }
+                        else if (i < 4) { year = '1995'; data = CLIMATE_DATA.Y1995; }
+                        else { year = '2005'; data = CLIMATE_DATA.Y2005; }
+
+                        return {
+                            label: `第${i+1}組 (${year}年)`,
+                            data: data,
+                            borderColor: CLIMATE_DATA.COLORS[i],
+                            backgroundColor: CLIMATE_DATA.COLORS[i],
+                            pointStyle: 'crossRot',
+                            pointRadius: 8,
+                            borderWidth: 3,
+                            tension: 0.3,
+                            hidden: true // 初始隱藏，老師點選後出現
+                        };
+                    })
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        offset: true, // 1月向右偏移不貼軸
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { weight: 'bold' } }
+                    },
+                    y: {
+                        min: 10, max: 40,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', callback: v => v + '°C' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // 動態生成左側控制列
+        const controls = document.getElementById('controls');
+        const years = ['1985', '1985', '1995', '1995', '2005', '2005'];
+        
+        for (let i = 1; i <= 6; i++) {
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all";
+            div.innerHTML = `
+                <label class="flex items-center gap-3 cursor-pointer w-full">
+                    <input type="checkbox" class="group-checkbox" onchange="toggleGroup(${i}, this.checked)">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-black uppercase opacity-60" style="color:${CLIMATE_DATA.COLORS[i-1]}">Group ${i}</span>
+                        <span class="text-sm font-bold text-white">${years[i-1]}年數據</span>
+                    </div>
+                </label>
+                <div class="w-3 h-3 rounded-full" style="background-color:${CLIMATE_DATA.COLORS[i-1]}"></div>
+            `;
+            controls.appendChild(div);
+        }
+
+        function toggleGroup(idx, show) {
+            chart.data.datasets[idx].hidden = !show;
+            chart.update('none');
+        }
+    </script>
+</body>
+</html>
