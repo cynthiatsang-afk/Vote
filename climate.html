@@ -3,64 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>香港氣候分析 - 最終完美修正版</title>
+    <title>香港氣候分析 - 終極保險版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #F1F5F9; touch-action: manipulation; }
         .main-card { background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 140px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; font-size: 1.5rem; }
-        .month-input { width: 70px; height: 45px; background: #F8FAFC; border-radius: 10px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; -webkit-appearance: none; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 120px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; font-size: 1.5rem; }
+        .month-input { width: 65px; height: 45px; background: #F8FAFC; border-radius: 10px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
         .scroll-container { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; -webkit-overflow-scrolling: touch; }
     </style>
 </head>
 <body class="p-3 md:p-6">
 
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-4">
-        <div class="text-xs font-black tracking-widest text-slate-400">HK CLIMATE TOOL</div>
-        <div class="flex items-center gap-4">
-            <div id="connectionStatus" class="bg-white px-3 py-1.5 rounded-full shadow-sm text-[11px] font-bold flex items-center">
+        <div class="text-[10px] font-black tracking-widest text-slate-400">HK CLIMATE DATA TOOL</div>
+        <div class="flex items-center gap-3">
+            <div id="connectionStatus" class="bg-white px-3 py-1.5 rounded-full shadow-sm text-[11px] font-bold flex items-center border border-slate-100">
                 <span id="statusDot" class="status-dot bg-gray-400"></span>
-                <span id="statusText">載入中...</span>
+                <span id="statusText">正在連線...</span>
             </div>
             <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-bold">
-                <button id="modeS" class="bg-white px-4 py-1.5 rounded-lg shadow-sm">學生</button>
-                <button id="modeT" class="px-4 py-1.5 rounded-lg">老師 🔒</button>
+                <button id="modeS" class="bg-white px-3 py-1.5 rounded-lg shadow-sm">學生</button>
+                <button id="modeT" class="px-3 py-1.5 rounded-lg">老師 🔒</button>
             </div>
         </div>
     </div>
 
     <div class="max-w-6xl mx-auto">
-        <div id="teacherView" class="hidden mb-6 bg-slate-900 rounded-[30px] p-6 text-white shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black">實時數據牆</h2>
-                <button id="clearAllBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-xs font-black">重置所有數據</button>
+        <div id="teacherView" class="hidden mb-6 bg-slate-900 rounded-[30px] p-6 text-white shadow-2xl border-4 border-blue-500/20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black flex items-center gap-2"><span class="text-blue-400">●</span> 全班監控看板</h2>
+                <button id="clearAllBtn" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-xs font-black transition-all">重置數據庫</button>
             </div>
             <div id="monitorGrid" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
         </div>
 
-        <div class="main-card p-6 md:p-10">
+        <div class="main-card p-5 md:p-10">
             <div class="text-center mb-8">
-                <h1 class="text-xl md:text-2xl font-black text-slate-800 mb-4 flex items-center justify-center flex-wrap gap-2">
+                <h1 class="text-xl md:text-2xl font-black text-slate-800 mb-6 flex items-center justify-center flex-wrap gap-2">
                     2025年與 <input type="number" id="yearInp" class="year-input-box" placeholder="____"> 年氣溫對比
                 </h1>
-                <div id="groupSelector" class="scroll-container justify-start md:justify-center"></div>
+                <div id="groupSelector" class="scroll-container justify-start md:justify-center px-2"></div>
             </div>
 
             <div id="studentInputArea" class="space-y-4 mb-8">
-                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row items-center gap-4 text-sm md:text-base">
-                    <span class="font-black text-slate-400 min-w-[100px]">2025對照:</span>
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row items-center gap-4">
+                    <span class="font-black text-slate-400 min-w-[100px] text-sm">2025年對照:</span>
                     <div class="scroll-container w-full" id="refGrid"></div>
                 </div>
                 <div id="inputBoxWrapper" class="p-4 rounded-2xl border-4 flex flex-col md:flex-row items-center gap-4 transition-all">
-                    <span id="groupLabel" class="font-black min-w-[100px]">數據輸入:</span>
+                    <span id="groupLabel" class="font-black min-w-[100px] text-sm">數據輸入:</span>
                     <div class="scroll-container w-full" id="inputGrid"></div>
                 </div>
             </div>
 
-            <div class="relative h-[480px] w-full bg-white rounded-xl">
+            <div class="relative h-[450px] w-full bg-white rounded-xl">
                 <canvas id="mainChart"></canvas>
             </div>
         </div>
@@ -77,29 +77,24 @@
         let state = { gid: 0, isTeacher: false, groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) })) };
         let saveTimeout = null;
 
-        // 全局鎖定交叉點
-        Chart.defaults.elements.point.pointStyle = 'crossRot';
-
+        // 圖表配置：修正 1月 貼邊與交叉點樣式
         const chart = new Chart(document.getElementById('mainChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
                 datasets: [
-                    { label: '2025年', data: API.REF, borderColor: '#CBD5E1', borderDash: [5,5], pointRadius: 6, tension: 0.1 },
+                    { label: '2025年', data: API.REF, borderColor: '#CBD5E1', borderDash: [5,5], pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
                         label: `第${i+1}組`, data: [], borderColor: API.COLORS[i], backgroundColor: API.COLORS[i],
-                        borderWidth: 3, pointRadius: 8, tension: 0.1, hidden: true
+                        borderWidth: 3, pointStyle: 'crossRot', pointRadius: 8, tension: 0.1, hidden: true
                     }))
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { 
-                    x: { 
-                        offset: true, // 重要修正：讓數據點向右移，不貼在縱軸線上
-                        grid: { display: true, color: '#F1F5F9' } 
-                    },
-                    y: { min: 10, max: 40, grid: { color: '#F1F5F9' } } 
+                    x: { offset: true, grid: { display: false } }, // 修正：讓1月向右移，不貼軸
+                    y: { min: 10, max: 40 } 
                 },
                 plugins: { legend: { labels: { usePointStyle: true } } }
             }
@@ -111,6 +106,7 @@
                 const res = await fetch(`https://api.jsonbin.io/v3/b/${API.BIN}/latest?t=${Date.now()}`, {
                     headers: { 'X-Master-Key': API.KEY }, cache: 'no-store'
                 });
+                if (!res.ok) throw new Error();
                 const d = await res.json();
                 let remoteGroups = d.record.groups;
 
@@ -129,7 +125,11 @@
                     }
                 }
                 setStatus('● 已同步', 'bg-green-500');
-            } catch (e) { setStatus('❌ 連線異常', 'bg-red-500'); }
+            } catch (e) { 
+                setStatus('❌ 連線異常', 'bg-red-500');
+                // 斷線自動重連機制
+                setTimeout(() => sync(false), 5000); 
+            }
         }
 
         function setStatus(txt, cls) {
@@ -174,7 +174,7 @@
             state.groups[state.gid].data[index] = val === '' ? null : parseFloat(val);
             updateChartOnly();
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => sync(true), 1500);
+            saveTimeout = setTimeout(() => sync(true), 1500); 
         }
 
         function renderGroupBtns() {
@@ -189,7 +189,7 @@
             }
             Array.from(c.children).forEach((b, i) => {
                 const active = (i === state.gid);
-                b.className = `flex-shrink-0 px-6 py-2 rounded-xl border-2 font-black text-sm transition-all`;
+                b.className = `flex-shrink-0 px-5 py-2 rounded-xl border-2 font-black text-sm transition-all`;
                 b.style.borderColor = API.COLORS[i];
                 b.style.backgroundColor = active ? API.COLORS[i] : 'transparent';
                 b.style.color = active ? 'white' : API.COLORS[i];
@@ -202,9 +202,9 @@
             state.groups.forEach((group, i) => {
                 const count = group.data.filter(d => d !== null).length;
                 g.innerHTML += `<div class="bg-white/10 p-3 rounded-2xl border border-white/5 text-center">
-                    <div class="text-[10px] font-bold" style="color:${API.COLORS[i]}">G${i+1}</div>
-                    <div class="text-xs font-black my-1">${group.year || '----'}</div>
-                    <div class="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                    <div class="text-[10px] font-black text-white/40 mb-1">組別 ${i+1}</div>
+                    <div class="text-sm font-black mb-1">${group.year || '未設年份'}</div>
+                    <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
                         <div class="h-full" style="width:${(count/12)*100}%; background-color:${API.COLORS[i]}"></div>
                     </div></div>`;
             });
@@ -217,23 +217,26 @@
                 ds.data = gData.data;
                 ds.label = gData.year ? `${gData.year}年 (第${i}組)` : `第${i}組`;
                 ds.hidden = state.isTeacher ? false : (i-1 !== state.gid);
+                ds.pointStyle = 'crossRot'; // 確保數據點為交叉
             });
             chart.update('none');
         }
 
         document.getElementById('modeT').onclick = () => {
-            const p = prompt("密碼 (預設 123456):");
+            const p = prompt("老師認證:");
             if (p === "123456") {
                 state.isTeacher = true;
                 document.getElementById('teacherView').classList.remove('hidden');
                 document.getElementById('studentInputArea').classList.add('hidden');
+                document.getElementById('modeT').classList.add('bg-white', 'shadow-sm');
+                document.getElementById('modeS').classList.remove('bg-white', 'shadow-sm');
                 refreshUI();
-                setInterval(() => sync(false), 3000);
+                setInterval(() => sync(false), 3000); 
             }
         };
 
         document.getElementById('clearAllBtn').onclick = async () => {
-            if (!confirm("確定重置？")) return;
+            if (!confirm("確定要重置所有組別的數據嗎？")) return;
             state.groups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
             await sync(true);
             refreshUI();
