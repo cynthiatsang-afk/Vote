@@ -42,7 +42,7 @@
                         <input type="checkbox" checked disabled class="group-checkbox opacity-30">
                     </div>
                 </div>
-                </div>
+            </div>
         </div>
 
         <div class="chart-panel">
@@ -50,9 +50,6 @@
                 <div>
                     <h3 class="text-2xl font-black text-slate-800">過去40年香港各月溫度的變化</h3>
                     <p class="text-slate-500 text-sm italic">數據點以直線連接 (Straight Line Chart)</p>
-                </div>
-                <div class="text-right text-xs font-bold text-slate-400">
-                    單位：攝氏度 (°C)
                 </div>
             </div>
             <div class="relative h-[550px] w-full bg-white">
@@ -66,7 +63,6 @@
         const CLIMATE_DATA = {
             LABELS: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
             REF_2025: [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2],
-            // 歷史數據 (12個月)
             Y1985: [14.4, 15.6, 17.7, 21.9, 25.2, 27.6, 28.4, 28.7, 28.7, 26.4, 21.8, 17.2],
             Y1995: [15.2, 16.5, 19.1, 22.8, 26.1, 28.2, 29.1, 28.8, 28.5, 26.9, 22.5, 18.1],
             Y2005: [15.8, 17.1, 19.8, 23.4, 26.8, 28.5, 29.3, 28.9, 29.0, 27.2, 23.0, 18.9],
@@ -86,7 +82,7 @@
                         borderDash: [5, 5],
                         pointStyle: 'crossRot',
                         pointRadius: 6,
-                        tension: 0 // 強制直線
+                        tension: 0
                     },
                     ...Array.from({length: 6}, (_, i) => {
                         let year = i < 2 ? '1985' : (i < 4 ? '1995' : '2005');
@@ -99,7 +95,7 @@
                             pointStyle: 'crossRot',
                             pointRadius: 8,
                             borderWidth: 3,
-                            tension: 0, // 強制直線
+                            tension: 0,
                             hidden: true
                         };
                     })
@@ -110,14 +106,32 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        offset: true, // 1月不貼邊
+                        offset: true,
                         grid: { color: '#F8FAFC' },
-                        ticks: { color: '#64748b', font: { weight: 'bold', size: 14 } }
+                        ticks: { color: '#64748b', font: { weight: 'bold', size: 14 } },
+                        title: {
+                            display: true,
+                            text: '月份',
+                            color: '#475569',
+                            font: { size: 16, weight: 'bold' },
+                            padding: { top: 10 }
+                        }
                     },
                     y: {
                         min: 10, max: 40,
                         grid: { color: '#F1F5F9' },
-                        ticks: { color: '#64748b', stepSize: 5 }
+                        ticks: { 
+                            color: '#64748b', 
+                            stepSize: 5,
+                            callback: function(value) { return value + '°C'; }
+                        },
+                        title: {
+                            display: true,
+                            text: '溫度 (°C)',
+                            color: '#475569',
+                            font: { size: 16, weight: 'bold' },
+                            padding: { bottom: 10 }
+                        }
                     }
                 },
                 plugins: {
@@ -126,7 +140,6 @@
             }
         });
 
-        // 生成控制卡
         const controls = document.getElementById('controls');
         const years = ['1985', '1985', '1995', '1995', '2005', '2005'];
         
