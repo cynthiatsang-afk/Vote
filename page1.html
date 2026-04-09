@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>同步問答 - 穩定連線強化版</title>
+    <title>同步問答 - 專業穿透版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #dfe6ed; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -19,7 +19,7 @@
         .stat-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
         .stat-num { font-size: 26px; font-weight: 900; }
         .refresh-btn { background: #f1c40f; border: none; width: 80px; font-weight: bold; cursor: pointer; }
-        .status-header { text-align: center; padding: 12px; font-weight: bold; background: #f1c40f; color: #333; transition: 0.5s; }
+        .status-header { text-align: center; padding: 12px; font-weight: bold; background: #f1c40f; color: #333; }
         .btn { flex: 1; margin: 10px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: white; font-weight: bold; border: 6px solid transparent; opacity: 0.5; pointer-events: none; transition: 0.3s; }
         .btn.ready { opacity: 1; pointer-events: auto; }
         .selected { border-color: white; transform: scale(0.95); box-shadow: 0 0 15px rgba(0,0,0,0.2); }
@@ -39,14 +39,29 @@
     </div>
 
     <div id="student-ui">
-        <div id="status-tag" class="status-header">準備連線...</div>
+        <div id="status-tag" class="status-header">等待連線...</div>
         <button id="btn-a" class="btn v-a" onclick="studentVote('a')">A</button>
         <button id="btn-b" class="btn v-b" onclick="studentVote('b')">B</button>
         <button id="btn-c" class="btn v-c" onclick="studentVote('c')">C</button>
     </div>
 
     <script>
-        const FIXED_ROOM_ID = '21090328'; 
+        // 設定唯一的房號，建議加上自定義前綴
+        const FIXED_ROOM_ID = 'CLASS_21090328'; 
+        
+        // 核心設定：加入 STUN 伺服器，協助穿透學校 Wi-Fi
+        const PEER_CONFIG = {
+            config: {
+                'iceServers': [
+                    { 'urls': 'stun:stun.l.google.com:19302' },
+                    { 'urls': 'stun:stun1.l.google.com:19302' },
+                    { 'urls': 'stun:stun2.l.google.com:19302' }
+                ],
+                'sdpSemantics': 'unified-plan'
+            },
+            debug: 1
+        };
+
         let peer, studentConn, teacherConns = [];
         const urlParams = new URLSearchParams(window.location.search);
         const roomID = urlParams.get('room');
@@ -60,12 +75,9 @@
             }
         };
 
+        // --- 老師端 ---
         function startTeacher() {
-            // 加入連線配置優化
-            peer = new Peer(FIXED_ROOM_ID, { 
-                debug: 1,
-                config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} 
-            });
+            peer = new Peer(FIXED_ROOM_ID, PEER_CONFIG);
             document.getElementById('teacher-ui').style.display = 'flex';
             peer.on('open', (id) => {
                 document.getElementById('room-info').innerText = "房間已就緒: " + id;
@@ -114,30 +126,25 @@
             teacherConns.forEach(c => { if (c.open) c.send({ type: 'reset' }); });
         }
 
-        // --- 學生端：強化連線邏輯 ---
+        // --- 學生端：關鍵修復 ---
         function startStudent(r, s) {
             document.getElementById('student-ui').style.display = 'flex';
             const tag = document.getElementById('status-tag');
             
-            // 隨機初始延遲 (100ms - 2500ms)
-            const initialDelay = Math.floor(Math.random() * 2400) + 100;
-            tag.innerText = "正在排隊連線...";
+            // 隨機延遲加大 (500ms ~ 4000ms)，避開伺服器併發限制
+            const randomDelay = Math.floor(Math.random() * 3500) + 500;
+            tag.innerText = "正在排隊進入房間...";
 
             setTimeout(() => {
-                connectProcess();
-            }, initialDelay);
-
-            function connectProcess() {
-                // 每次嘗試建立新 Peer
-                if(peer) peer.destroy();
+                if (peer) peer.destroy();
+                peer = new Peer(PEER_CONFIG); 
                 
-                peer = new Peer({ 
-                    debug: 1,
-                    config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} 
-                });
-
                 peer.on('open', () => {
-                    studentConn = peer.connect(r, { reliable: true });
+                    // 使用 metadata 傳遞身份，增加連線成功率
+                    studentConn = peer.connect(r, { 
+                        reliable: true,
+                        metadata: { seat: s } 
+                    });
                     
                     studentConn.on('open', () => {
                         tag.innerText = "座位 " + s + "：連線成功！";
@@ -147,20 +154,17 @@
                     });
 
                     studentConn.on('close', () => {
-                        tag.innerText = "連線中連，自動重試中...";
+                        tag.innerText = "連線中斷，嘗試重新連線...";
                         tag.style.background = "#f39c12";
-                        document.querySelectorAll('.btn').forEach(b => b.classList.remove('ready'));
-                        setTimeout(connectProcess, 2000);
+                        setTimeout(() => startStudent(r, s), 2000);
                     });
                 });
 
                 peer.on('error', (err) => {
-                    console.log("PeerError:", err.type);
-                    tag.innerText = "伺服器忙碌，重試中...";
-                    // 遇到錯誤（如伺服器滿載）兩秒後重試
-                    setTimeout(connectProcess, 2000);
+                    tag.innerText = "連線嘗試中 (" + err.type + ")...";
+                    setTimeout(() => startStudent(r, s), 3000);
                 });
-            }
+            }, randomDelay);
         }
 
         function studentVote(ans) {
@@ -170,7 +174,7 @@
                 studentConn.send({ type: 'vote', seat: seatID, ans: ans });
                 if (navigator.vibrate) navigator.vibrate(40);
             } else {
-                alert("正在重新連線，請稍候...");
+                alert("連線不穩定，請稍候...");
             }
         }
     </script>
