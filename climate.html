@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港氣候分析工具 - 穩定版</title>
+    <title>香港氣候分析工具 - 多組同步修復版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,20 +11,20 @@
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8FAFC; color: #1E293B; }
         .main-card { background: white; border-radius: 40px; box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.05); }
         .teacher-monitor { background: #1E293B; border-radius: 30px; padding: 24px; color: white; margin-bottom: 24px; }
-        .progress-bar-bg { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 6px; }
-        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 90px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; }
-        .scroll-x-container { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 12px; }
-        .month-input { width: 60px; height: 38px; background: white; border-radius: 8px; text-align: center; font-weight: 500; border: 1px solid #E2E8F0; }
+        /* 修正年份顯示不全 */
+        .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 110px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; font-size: 1.2rem; }
+        .month-input { width: 65px; height: 40px; background: white; border-radius: 8px; text-align: center; font-weight: 500; border: 1px solid #E2E8F0; }
+        .scroll-x-container { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 15px; }
         .btn-mode-toggle { background: #E2E8F0; padding: 4px; border-radius: 14px; }
         .btn-mode-toggle button { padding: 6px 20px; border-radius: 10px; font-weight: bold; }
-        .btn-mode-toggle button.active { background: white; color: #1E293B; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-mode-toggle button.active { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         #authModal { display: none; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="p-4">
 
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-6">
-        <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest">CLIMATE ANALYSIS TOOL</div>
+        <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase">CLIMATE ANALYSIS TOOL</div>
         <div class="flex items-center gap-3">
             <div id="syncStatus" class="text-[10px] font-bold text-slate-400">連線中...</div>
             <div class="btn-mode-toggle flex text-sm">
@@ -37,37 +37,40 @@
     <div class="max-w-6xl mx-auto">
         <div id="teacherDashboard" class="hidden teacher-monitor">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black">組別實時進度 (每5秒更新)</h2>
-                <button id="btnClearData" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-6 rounded-xl shadow-lg">清空所有學生數據</button>
+                <h2 class="text-xl font-black">組別實時進度 (每5秒自動更新)</h2>
+                <button id="btnClearData" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-6 rounded-xl shadow-lg transition-all">清空全體數據</button>
             </div>
             <div id="monitorGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"></div>
         </div>
 
         <div class="main-card p-6 md:p-12 text-center">
-            <h1 id="mainTitle" class="text-2xl md:text-4xl font-black text-slate-800 mb-8"></h1>
+            <h1 id="mainTitle" class="text-2xl md:text-3xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap">
+                2025年與 <input type="number" id="yearInput" class="year-input-box" placeholder="____"> 年對比
+            </h1>
 
-            <div id="groupButtonsContainer" class="mb-10">
-                <div id="groupButtons" class="scroll-x-container justify-start md:justify-center"></div>
-            </div>
+            <div id="groupButtons" class="scroll-x-container justify-start md:justify-center mb-10"></div>
 
             <div id="dataInputArea" class="space-y-6 mb-8 text-left">
-                <div class="flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-[25px]">
+                <div class="flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-[25px] border border-slate-100">
                     <div class="flex items-center gap-3 min-w-[180px]">
-                        <input type="checkbox" checked id="toggleRef" onchange="updateChart()">
+                        <span class="w-4 h-4 rounded bg-slate-400"></span>
                         <span class="text-slate-500 font-black">2025年對照數據</span>
+                        <input type="checkbox" checked id="toggleRef" onchange="updateChart()">
                     </div>
                     <div class="flex-1 w-full overflow-hidden"><div id="refDataGrid" class="scroll-x-container"></div></div>
                 </div>
-                <div id="inputSectionWrapper" class="flex flex-col md:flex-row items-center gap-4 p-4 rounded-[25px] border-2">
+
+                <div id="inputSectionWrapper" class="flex flex-col md:flex-row items-center gap-4 p-4 rounded-[25px] border-2 transition-all">
                     <div class="flex items-center gap-3 min-w-[180px]">
+                        <span id="groupRectIcon" class="w-4 h-4 rounded"></span>
+                        <span id="inputLabelYearDisplay" class="font-black underline whitespace-nowrap">尚未輸入年份</span>
                         <input type="checkbox" checked id="toggleUser" onchange="updateChart()">
-                        <span id="inputLabelYear" class="font-black">年份輸入</span>
                     </div>
                     <div class="flex-1 w-full overflow-hidden"><div id="inputDataGrid" class="scroll-x-container"></div></div>
                 </div>
             </div>
 
-            <div class="relative h-[500px] w-full bg-white p-2">
+            <div class="relative h-[500px] w-full bg-white rounded-2xl p-2 border border-slate-50">
                 <canvas id="tempChart"></canvas>
             </div>
         </div>
@@ -75,7 +78,7 @@
 
     <div id="authModal">
         <div class="bg-white rounded-3xl p-8 max-w-xs w-full text-center">
-            <h3 class="text-xl font-black mb-4">老師身份驗證</h3>
+            <h3 class="text-xl font-black mb-4">老師身分驗證</h3>
             <input type="password" id="passField" class="w-full bg-slate-50 border-2 rounded-xl px-4 py-3 text-center mb-6" placeholder="請輸入密碼">
             <div class="flex gap-3">
                 <button id="cancelAuth" class="flex-1 text-slate-400 font-bold">取消</button>
@@ -96,97 +99,100 @@
             isTeacher: false,
             activeGroup: 0,
             visibleGroups: new Array(6).fill(true),
-            lastCloudReset: 0,
+            lastResetToken: 0,
             groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }))
         };
 
-        // 初始化圖表
         const ctx = document.getElementById('tempChart').getContext('2d');
         let chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
                 datasets: [
-                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
+                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointRadius: 4, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`, data: [], borderColor: COLORS[i], pointStyle: 'crossRot', pointRadius: 6, tension: 0.1, hidden: true
+                        label: `第${i+1}組`, data: [], borderColor: COLORS[i], borderWidth: 3, pointRadius: 5, tension: 0.1, hidden: true
                     }))
                 ]
             },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 10, max: 40 } } }
         });
 
-        // 核心：抓取雲端
+        // 從雲端同步
         async function fetchCloudData() {
             try {
-                const res = await fetch(`${API_URL}/latest?cache=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY } });
+                const res = await fetch(`${API_URL}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY }, cache: 'no-store' });
                 const json = await res.json();
-                
-                // 檢查雲端是否有重置標記
-                if (json.record.lastReset > state.lastCloudReset) {
-                    state.lastCloudReset = json.record.lastReset;
+                const cloud = json.record;
+
+                // 檢查是否被清空 (ResetToken 檢查)
+                if (cloud.resetToken && cloud.resetToken > state.lastResetToken) {
+                    state.lastResetToken = cloud.resetToken;
+                    state.groups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
+                    if(!state.isTeacher) document.getElementById('yearInput').value = '';
+                } else {
+                    state.groups = cloud.groups || state.groups;
                 }
-                
-                state.groups = json.record.groups || json.record; 
-                renderMonitor();
-                updateChart();
-                if (!state.isTeacher) renderGrids();
+
+                syncUI();
                 document.getElementById('syncStatus').innerText = '● 已同步';
+                document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
             } catch (e) { console.error(e); }
         }
 
-        // 核心：推送雲端 (帶防覆蓋邏輯)
+        // 推送到雲端 (局部更新邏輯，解決多組覆蓋問題)
         async function pushCloudData() {
-            document.getElementById('syncStatus').innerText = '○ 儲存中...';
+            document.getElementById('syncStatus').innerText = '○ 同步中...';
             try {
                 const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
                 const json = await res.json();
-                let cloudData = json.record.groups || json.record;
+                let latestGroups = json.record.groups;
 
-                // 更新當前組別
-                cloudData[state.activeGroup] = state.groups[state.activeGroup];
+                // 只更新自己這一組
+                latestGroups[state.activeGroup] = state.groups[state.activeGroup];
 
                 await fetch(API_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-                    body: JSON.stringify({ groups: cloudData, lastReset: state.lastCloudReset })
+                    body: JSON.stringify({ groups: latestGroups, resetToken: state.lastResetToken })
                 });
                 document.getElementById('syncStatus').innerText = '● 已儲存';
             } catch (e) { document.getElementById('syncStatus').innerText = '❌ 失敗'; }
         }
 
+        function syncUI() {
+            const currentGroup = state.groups[state.activeGroup];
+            const color = COLORS[state.activeGroup];
+
+            if (!state.isTeacher) {
+                const yearInp = document.getElementById('yearInput');
+                if (document.activeElement !== yearInp) yearInp.value = currentGroup.year;
+                
+                // 修正標籤年份顯示
+                document.getElementById('inputLabelYearDisplay').innerText = (currentGroup.year || '_______') + '年輸入';
+                document.getElementById('inputLabelYearDisplay').style.color = color;
+                document.getElementById('inputSectionWrapper').style.borderColor = color;
+                document.getElementById('groupRectIcon').style.backgroundColor = color;
+                renderGrids();
+                renderGroupBtns();
+            }
+            renderMonitor();
+            updateChart();
+        }
+
         function renderGrids() {
             const refGrid = document.getElementById('refDataGrid');
-            const inputGrid = document.getElementById('inputDataGrid');
             if (refGrid.children.length === 0) {
-                REF_TEMPS.forEach((t, i) => refGrid.innerHTML += `<div class="flex flex-col items-center"><span class="text-[10px] text-slate-400">${i+1}月</span><div class="month-display">${t}°</div></div>`);
+                REF_TEMPS.forEach((t, i) => refGrid.innerHTML += `<div class="flex flex-col items-center"><span class="text-[10px] text-slate-400 font-bold">${i+1}月</span><div class="w-[60px] h-[38px] bg-slate-100 rounded-lg flex items-center justify-center text-sm">${t}°</div></div>`);
             }
-            
+
+            const inputGrid = document.getElementById('inputDataGrid');
             inputGrid.innerHTML = '';
             state.groups[state.activeGroup].data.forEach((val, i) => {
                 inputGrid.innerHTML += `<div class="flex flex-col items-center">
                     <span class="text-[10px] font-bold" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
-                    <input type="number" step="0.1" class="month-input" value="${val||''}" oninput="state.groups[state.activeGroup].data[${i}]=this.value===''?null:parseFloat(this.value); updateChart(); pushCloudData();">
-                </div>`;
-            });
-            
-            const titleInput = document.getElementById('yearInput');
-            if (titleInput && document.activeElement !== titleInput) titleInput.value = state.groups[state.activeGroup].year;
-        }
-
-        function renderMonitor() {
-            const grid = document.getElementById('monitorGrid');
-            if (!grid) return;
-            grid.innerHTML = '';
-            state.groups.forEach((g, i) => {
-                const filled = g.data.filter(d => d !== null).length;
-                grid.innerHTML += `<div class="bg-white/5 p-3 rounded-2xl border border-white/10">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-xs font-bold" style="color:${COLORS[i]}">G${i+1}</span>
-                        <input type="checkbox" ${state.visibleGroups[i]?'checked':''} onchange="state.visibleGroups[${i}]=this.checked; updateChart();">
-                    </div>
-                    <div class="text-[9px] mb-1 opacity-50">${g.year||'未填'}年</div>
-                    <div class="progress-bar-bg"><div class="h-full rounded-full bg-current" style="width:${filled/12*100}%; color:${COLORS[i]}"></div></div>
+                    <input type="number" step="0.1" class="month-input" value="${val !== null ? val : ''}" 
+                        oninput="state.groups[state.activeGroup].data[${i}]=this.value===''?null:parseFloat(this.value); updateChart(); pushCloudData();">
                 </div>`;
             });
         }
@@ -195,29 +201,37 @@
             const container = document.getElementById('groupButtons');
             if (container.children.length > 0) return;
             state.groups.forEach((_, i) => {
-                container.innerHTML += `<button onclick="state.activeGroup=${i}; syncUI();" class="group-btn flex-shrink-0 px-6 py-2 rounded-xl border-2 font-bold text-sm mx-1">第${i+1}組</button>`;
+                container.innerHTML += `<button onclick="switchGroup(${i})" class="group-btn flex-shrink-0 px-6 py-2 rounded-xl border-2 font-bold text-sm mx-1">第${i+1}組</button>`;
+            });
+            updateBtnStyles();
+        }
+
+        function switchGroup(idx) {
+            state.activeGroup = idx;
+            syncUI();
+            updateBtnStyles();
+        }
+
+        function updateBtnStyles() {
+            document.querySelectorAll('.group-btn').forEach((btn, i) => {
+                btn.style.borderColor = COLORS[i];
+                btn.style.backgroundColor = (i === state.activeGroup) ? COLORS[i] : 'white';
+                btn.style.color = (i === state.activeGroup) ? 'white' : COLORS[i];
             });
         }
 
-        function syncUI() {
-            const color = COLORS[state.activeGroup];
-            const mainTitle = document.getElementById('mainTitle');
-            if (state.isTeacher) {
-                mainTitle.innerText = '全班氣候數據監控中心';
-                document.getElementById('teacherDashboard').classList.remove('hidden');
-                document.getElementById('dataInputArea').style.display = 'none';
-                document.getElementById('groupButtonsContainer').style.display = 'none';
-            } else {
-                mainTitle.innerHTML = `2025年與 <input type="number" id="yearInput" class="year-input-box" placeholder="____"> 年對比`;
-                document.getElementById('yearInput').oninput = (e) => { state.groups[state.activeGroup].year = e.target.value; pushCloudData(); };
-                document.getElementById('teacherDashboard').classList.add('hidden');
-                document.getElementById('dataInputArea').style.display = 'block';
-                document.getElementById('groupButtonsContainer').style.display = 'block';
-                document.getElementById('inputSectionWrapper').style.borderColor = color;
-                renderGrids();
-                renderGroupBtns();
-            }
-            updateChart();
+        function renderMonitor() {
+            const grid = document.getElementById('monitorGrid');
+            if (!grid) return; grid.innerHTML = '';
+            state.groups.forEach((g, i) => {
+                const filled = g.data.filter(d => d !== null).length;
+                grid.innerHTML += `<div class="bg-white/5 p-3 rounded-2xl border border-white/10 text-center">
+                    <div class="flex justify-between items-center mb-2"><span class="text-xs font-bold" style="color:${COLORS[i]}">第${i+1}組</span>
+                    <input type="checkbox" ${state.visibleGroups[i]?'checked':''} onchange="state.visibleGroups[${i}]=this.checked; updateChart();"></div>
+                    <div class="text-[10px] opacity-60 mb-1">${g.year||'----'}年</div>
+                    <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full" style="width:${filled/12*100}%; background-color:${COLORS[i]}"></div></div>
+                </div>`;
+            });
         }
 
         function updateChart() {
@@ -231,50 +245,38 @@
                 }
             });
             chart.update('none');
-            // 更新按鈕樣式
-            document.querySelectorAll('.group-btn').forEach((btn, i) => {
-                btn.style.backgroundColor = (i === state.activeGroup) ? COLORS[i] : 'white';
-                btn.style.color = (i === state.activeGroup) ? 'white' : COLORS[i];
-                btn.style.borderColor = COLORS[i];
-            });
         }
 
-        // 老師認證
+        // 老師切換與清空
         document.getElementById('btnTeacher').onclick = () => document.getElementById('authModal').style.display='flex';
-        document.getElementById('btnStudent').onclick = () => { state.isTeacher=false; syncUI(); };
-        document.getElementById('cancelAuth').onclick = () => document.getElementById('authModal').style.display='none';
+        document.getElementById('btnStudent').onclick = () => { state.isTeacher=false; document.getElementById('teacherDashboard').classList.add('hidden'); document.getElementById('btnStudent').classList.add('active'); document.getElementById('btnTeacher').classList.remove('active'); syncUI(); };
         document.getElementById('confirmAuth').onclick = () => {
             if(document.getElementById('passField').value === "123456") {
                 state.isTeacher = true; document.getElementById('authModal').style.display='none';
-                syncUI();
-                setInterval(fetchCloudData, 5000);
+                document.getElementById('teacherDashboard').classList.remove('hidden');
+                document.getElementById('btnTeacher').classList.add('active'); document.getElementById('btnStudent').classList.remove('active');
+                syncUI(); setInterval(fetchCloudData, 5000); 
             }
         };
+        document.getElementById('cancelAuth').onclick = () => document.getElementById('authModal').style.display='none';
 
-        // --- 核心清空功能 ---
         document.getElementById('btnClearData').onclick = async () => {
-            if (!confirm('確定要清空所有組別嗎？學生畫面將會同步重置。')) return;
-            
-            const emptyGroups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
-            const resetTime = Date.now();
-            
-            document.getElementById('syncStatus').innerText = '○ 正在重置雲端...';
+            if (!confirm('將永久清空 6 組數據，確定嗎？')) return;
+            const empty = { groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) })), resetToken: Date.now() };
             try {
-                await fetch(API_URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-                    body: JSON.stringify({ groups: emptyGroups, lastReset: resetTime })
-                });
-                state.groups = emptyGroups;
-                state.lastCloudReset = resetTime;
-                syncUI();
-                alert('已清空！所有學生端將在 10 秒內同步重置。');
+                await fetch(API_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY }, body: JSON.stringify(empty) });
+                state.groups = empty.groups; state.lastResetToken = empty.resetToken;
+                syncUI(); alert('已成功清空！學生端將在10秒內自動同步。');
             } catch (e) { alert('清空失敗'); }
         };
 
+        document.getElementById('yearInput').oninput = (e) => {
+            state.groups[state.activeGroup].year = e.target.value;
+            syncUI(); pushCloudData();
+        };
+
         fetchCloudData();
-        setInterval(fetchCloudData, 10000); 
-        syncUI();
+        setInterval(fetchCloudData, 10000); // 學生後台同步
     </script>
 </body>
 </html>
