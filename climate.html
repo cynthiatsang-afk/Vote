@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港氣候 analysis 工具</title>
+    <title>香港氣候分析工具</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -91,7 +91,6 @@
     </div>
 
     <script>
-        // --- Jsonbin 設定 ---
         const BIN_ID = '69d739df36566621a892d521';
         const MASTER_KEY = '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu870';
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -106,29 +105,24 @@
             groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }))
         };
 
-        // --- 初始化圖表 ---
         const ctx = document.getElementById('tempChart').getContext('2d');
         let chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
                 datasets: [
-                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
+                    { label: '2025年', data: REF_TEMPS, borderColor: '#CBD5E1', borderWidth: 2, pointStyle: 'circle', pointRadius: 4, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`, data: new Array(12).fill(null), borderColor: COLORS[i], borderWidth: 3, pointStyle: 'crossRot', pointRadius: 6, pointBackgroundColor: COLORS[i], tension: 0.1, hidden: true
+                        label: `第${i+1}組`, data: new Array(12).fill(null), borderColor: COLORS[i], borderWidth: 3, pointStyle: 'circle', pointRadius: 5, pointBackgroundColor: COLORS[i], tension: 0.1, hidden: true
                     }))
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40 } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40, title: { display: true, text: '溫度 (°C)' } } } }
         });
 
-        // --- 同步邏輯 ---
         async function fetchCloudData() {
             try {
-                const res = await fetch(`${API_URL}/latest`, { 
-                    headers: { 'X-Master-Key': MASTER_KEY },
-                    cache: 'no-store'
-                });
+                const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY }, cache: 'no-store' });
                 const json = await res.json();
                 if (json.record && Array.isArray(json.record)) {
                     state.groups = json.record;
@@ -156,11 +150,11 @@
                         body: JSON.stringify(latestGroups)
                     });
                     document.getElementById('syncStatus').innerText = '● 已儲存到雲端';
+                    updateChart(); // 儲存後立即刷新圖表
                 } catch (e) { document.getElementById('syncStatus').innerText = '❌ 儲存失敗'; }
             }, 800); 
         }
 
-        // --- UI 控制 ---
         function syncUI() {
             const currentGroup = state.groups[state.activeGroup];
             const color = COLORS[state.activeGroup];
@@ -201,7 +195,7 @@
             if (!grid) return;
             grid.innerHTML = '';
             state.groups.forEach((g, i) => {
-                const filled = g.data.filter(d => d !== null).length;
+                const filled = g.data.filter(d => d !== null && !isNaN(d)).length;
                 grid.innerHTML += `
                     <div class="bg-white/5 p-3 rounded-2xl border border-white/10">
                         <div class="flex justify-between items-start mb-2">
@@ -209,7 +203,7 @@
                             <input type="checkbox" ${state.visibleGroups[i] ? 'checked' : ''} onchange="state.visibleGroups[${i}]=this.checked; updateChart();">
                         </div>
                         <div class="text-[10px] opacity-60 mb-2">${g.year ? g.year + '年' : '未輸入'}</div>
-                        <div class="progress-bar-bg"><div class="h-full rounded-full" style="width:${(filled/12*100)}%; background-color:${COLORS[i]}"></div></div>
+                        <div class="progress-bar-bg"><div class="h-full rounded-full transition-all" style="width:${(filled/12*100)}%; background-color:${COLORS[i]}"></div></div>
                     </div>`;
             });
         }
@@ -217,7 +211,7 @@
         function renderGrids() {
             const refGrid = document.getElementById('refDataGrid');
             const inputGrid = document.getElementById('inputDataGrid');
-            if (!refGrid.children.length) {
+            if (refGrid.children.length === 0) {
                 REF_TEMPS.forEach((t, i) => {
                     refGrid.innerHTML += `<div class="flex flex-col items-center"><span class="text-[11px] font-bold text-slate-400 mb-1">${i+1}月</span><div class="month-display">${t}°</div></div>`;
                 });
@@ -226,10 +220,9 @@
             state.groups[state.activeGroup].data.forEach((val, i) => {
                 inputGrid.innerHTML += `<div class="flex flex-col items-center">
                     <span class="text-[11px] font-bold mb-1" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
-                    <input type="number" step="0.1" class="month-input" value="${val||''}" oninput="state.groups[state.activeGroup].data[${i}]=parseFloat(this.value)||null; pushCloudData();">
+                    <input type="number" step="0.1" class="month-input" value="${val!==null?val:''}" oninput="state.groups[state.activeGroup].data[${i}]=this.value===''?null:parseFloat(this.value); updateChart(); pushCloudData();">
                 </div>`;
             });
-            document.getElementById('inputLabelYear').innerText = `${state.groups[state.activeGroup].year || '_______'}年輸入`;
         }
 
         function renderGroupBtns() {
@@ -243,19 +236,26 @@
         }
 
         function updateChart() {
+            if (!chart) return;
             chart.data.datasets.forEach((ds, i) => {
-                if (i === 0) ds.hidden = !document.getElementById('toggleRef').checked;
-                else {
-                    ds.data = state.groups[i-1].data;
-                    ds.label = (state.groups[i-1].year || `第${i}組`) + (state.groups[i-1].year ? "年" : "");
-                    if (state.isTeacher) ds.hidden = !state.visibleGroups[i-1];
-                    else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
+                if (i === 0) {
+                    ds.hidden = !document.getElementById('toggleRef').checked;
+                } else {
+                    const groupData = state.groups[i-1];
+                    ds.data = [...groupData.data]; 
+                    ds.label = (groupData.year ? groupData.year + "年" : `第${i}組`);
+                    
+                    if (state.isTeacher) {
+                        ds.hidden = !state.visibleGroups[i-1];
+                    } else {
+                        // 學生模式：只顯示目前選中的組別
+                        ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
+                    }
                 }
             });
-            chart.update('none');
+            chart.update('none'); 
         }
 
-        // --- 事件綁定 ---
         document.getElementById('btnTeacher').onclick = () => document.getElementById('authModal').style.display='flex';
         document.getElementById('btnStudent').onclick = () => { 
             state.isTeacher=false; 
@@ -273,11 +273,9 @@
             }
         };
 
-        // --- 老師清空按鈕邏輯 ---
         document.getElementById('btnClearData').onclick = async () => {
-            if (confirm('確定要清空所有組別的輸入內容嗎？此操作無法還原。')) {
+            if (confirm('確定要清空所有組別的輸入內容嗎？')) {
                 const emptyData = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
-                document.getElementById('syncStatus').innerText = '○ 正在重置數據...';
                 try {
                     await fetch(API_URL, {
                         method: 'PUT',
@@ -286,8 +284,7 @@
                     });
                     state.groups = emptyData;
                     syncUI();
-                    document.getElementById('syncStatus').innerText = '● 數據已清空';
-                } catch (e) { alert('清空失敗，請檢查網路連線。'); }
+                } catch (e) { alert('清空失敗'); }
             }
         };
 
