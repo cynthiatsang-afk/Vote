@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>香港氣候分析 - 離線本地版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F1F5F9; touch-action: manipulation; }
+        .main-card { background: white; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .year-input { border: none; border-bottom: 3px solid #EF4444; width: 100px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; font-size: 1.5rem; outline: none; }
+        .month-input { width: 60px; height: 40px; background: #F8FAFC; border-radius: 8px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; }
+        .month-input:focus { border-color: #EF4444; background: white; outline: none; }
+        .group-btn { transition: all 0.2s; border: 2px solid; }
+        .scroll-box { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 5px; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-6xl mx-auto flex justify-between items-center mb-4">
+        <div class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Offline Mode • Local Storage</div>
+        <button onclick="resetAll()" class="text-[10px] font-bold text-red-400 border border-red-200 px-2 py-1 rounded-md">重設所有數據</button>
+    </div>
+
+    <div class="max-w-6xl mx-auto main-card p-6">
+        <div class="text-center mb-8">
+            <h1 class="text-xl md:text-2xl font-black text-slate-800">
+                2025年與 <input type="number" id="yearInp" class="year-input" placeholder="____"> 年氣溫對比
+            </h1>
+            <div id="groupSelector" class="flex justify-center gap-2 mt-6 flex-wrap"></div>
+        </div>
+
+        <div class="space-y-4 mb-8">
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
+                <span class="font-bold text-slate-400 text-sm min-w-[70px]">2025對照</span>
+                <div class="scroll-box w-full" id="refGrid"></div>
+            </div>
+            <div id="inputBoxWrapper" class="p-4 rounded-2xl border-4 flex items-center gap-4 transition-all">
+                <span id="groupLabel" class="font-bold text-sm min-w-[70px]">數據輸入</span>
+                <div class="scroll-box w-full" id="inputGrid"></div>
+            </div>
+        </div>
+
+        <div class="relative h-[450px] w-full">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // 預設數據
+        const CONFIG = {
+            REF: [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2],
+            COLORS: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
+        };
+
+        // 從 LocalStorage 讀取或初始化
+        let state = {
+            gid: 0,
+            groups: JSON.parse(localStorage.getItem('hk_local_climate')) || Array.from({length: 6}, () => ({ 
+                year: '', 
+                data: new Array(12).fill(null) 
+            }))
+        };
+
+        // 初始化圖表
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+                datasets: [
+                    { 
+                        label: '2025年', 
+                        data: CONFIG.REF, 
+                        borderColor: '#CBD5E1', 
+                        borderDash: [5,5], 
+                        pointStyle: 'crossRot', 
+                        pointRadius: 6 
+                    },
+                    ...Array.from({length: 6}, (_, i) => ({
+                        label: `第${i+1}組`, 
+                        data: [], 
+                        borderColor: CONFIG.COLORS[i], 
+                        backgroundColor: CONFIG.COLORS[i],
+                        pointStyle: 'crossRot', 
+                        pointRadius: 8, 
+                        tension: 0.2, 
+                        hidden: true
+                    }))
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { 
+                    x: { 
+                        offset: true, // 核心修正：讓數據點向右移，不貼在Y軸線上
+                        grid: { display: false } 
+                    },
+                    y: { min: 10, max: 40 }
+                },
+                plugins: { 
+                    legend: { labels: { usePointStyle: true } } 
+                }
+            }
+        });
+
+        // 刷新介面
+        function refreshUI() {
+            const current = state.groups[state.gid];
+            const color = CONFIG.COLORS[state.gid];
+
+            // 更新年份輸入框
+            document.getElementById('yearInp').value = current.year || '';
+            
+            // 更新輸入區域樣式
+            document.getElementById('groupLabel').innerText = (current.year || '____') + '年';
+            document.getElementById('groupLabel').style.color = color;
+            document.getElementById('inputBoxWrapper').style.borderColor = color;
+
+            // 渲染2025對照數據 (只渲染一次)
+            const rg = document.getElementById('refGrid');
+            if (rg.innerHTML === '') {
+                CONFIG.REF.forEach((v, i) => {
+                    rg.innerHTML += `<div class="text-center"><div class="text-[10px] font-bold text-slate-300">${i+1}月</div><div class="text-xs font-black text-slate-400">${v}°</div></div>`;
+                });
+            }
+
+            // 渲染學生輸入框
+            const ig = document.getElementById('inputGrid');
+            ig.innerHTML = '';
+            current.data.forEach((v, i) => {
+                ig.innerHTML += `
+                    <div class="text-center">
+                        <div class="text-[10px] font-bold" style="color:${color}">${i+1}月</div>
+                        <input type="number" step="0.1" class="month-input" value="${v||''}" 
+                               oninput="updateVal(${i}, this.value)">
+                    </div>`;
+            });
+
+            updateChart();
+            localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
+        }
+
+        // 更新數據
+        function updateVal(index, val) {
+            state.groups[state.gid].data[index] = val === '' ? null : parseFloat(val);
+            updateChart();
+            localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
+        }
+
+        // 更新圖表
+        function updateChart() {
+            chart.data.datasets.forEach((ds, i) => {
+                if (i === 0) return;
+                ds.data = state.groups[i-1].data;
+                ds.label = state.groups[i-1].year ? `${state.groups[i-1].year}年 (第${i}組)` : `第${i}組`;
+                ds.hidden = (i-1 !== state.gid); // 只顯示當前選中組別
+                ds.pointStyle = 'crossRot'; // 確保為交叉點
+            });
+            chart.update('none');
+        }
+
+        // 初始化組別按鈕
+        const gs = document.getElementById('groupSelector');
+        CONFIG.COLORS.forEach((color, i) => {
+            const btn = document.createElement('button');
+            btn.innerText = `第 ${i+1} 組`;
+            btn.className = `group-btn px-6 py-2 rounded-xl text-sm font-black`;
+            btn.style.borderColor = color;
+            btn.style.color = color;
+            btn.onclick = () => {
+                state.gid = i;
+                document.querySelectorAll('.group-btn').forEach((b, idx) => {
+                    b.style.backgroundColor = 'transparent';
+                    b.style.color = CONFIG.COLORS[idx];
+                });
+                btn.style.backgroundColor = color;
+                btn.style.color = 'white';
+                refreshUI();
+            };
+            if(i === 0) {
+                btn.style.backgroundColor = color;
+                btn.style.color = 'white';
+            }
+            gs.appendChild(btn);
+        });
+
+        // 年份輸入事件
+        document.getElementById('yearInp').oninput = (e) => {
+            state.groups[state.gid].year = e.target.value;
+            document.getElementById('groupLabel').innerText = (e.target.value || '____') + '年';
+            updateChart();
+            localStorage.setItem('hk_local_climate', JSON.stringify(state.groups));
+        };
+
+        // 重設功能
+        function resetAll() {
+            if(confirm('確定要清空所有組別的數據嗎？')) {
+                localStorage.removeItem('hk_local_climate');
+                location.reload();
+            }
+        }
+
+        // 啟動
+        refreshUI();
+    </script>
+</body>
+</html>
