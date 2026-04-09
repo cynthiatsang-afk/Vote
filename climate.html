@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>香港氣候分析 - 實時同步版</title>
+    <title>香港氣候分析 - 最終穩定版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,8 +12,7 @@
         .main-card { background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .year-input-box { border: none; border-bottom: 3px solid #EF4444; width: 140px; background: transparent; color: #EF4444; text-align: center; font-weight: 900; outline: none; font-size: 1.5rem; }
         .month-input { width: 70px; height: 45px; background: #F8FAFC; border-radius: 10px; text-align: center; font-weight: bold; border: 2px solid #E2E8F0; -webkit-appearance: none; }
-        .month-input:focus { border-color: #3B82F6; background: white; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
         .scroll-container { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; -webkit-overflow-scrolling: touch; }
     </style>
 </head>
@@ -22,9 +21,9 @@
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-4">
         <div class="text-xs font-black tracking-widest text-slate-400">HK CLIMATE TOOL</div>
         <div class="flex items-center gap-4">
-            <div id="connectionStatus" class="bg-white px-3 py-1 rounded-full shadow-sm text-[10px] font-bold flex items-center">
+            <div id="connectionStatus" class="bg-white px-3 py-1.5 rounded-full shadow-sm text-[11px] font-bold flex items-center">
                 <span id="statusDot" class="status-dot bg-gray-400"></span>
-                <span id="statusText">正在連線...</span>
+                <span id="statusText">初始化中...</span>
             </div>
             <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-bold">
                 <button id="modeS" class="bg-white px-4 py-1.5 rounded-lg shadow-sm">學生</button>
@@ -34,10 +33,10 @@
     </div>
 
     <div class="max-w-6xl mx-auto">
-        <div id="teacherView" class="hidden mb-6 bg-slate-900 rounded-[30px] p-6 text-white">
+        <div id="teacherView" class="hidden mb-6 bg-slate-900 rounded-[30px] p-6 text-white shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black">全班實時數據牆 (3秒自動更新)</h2>
-                <button id="clearAllBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg active:scale-95">清空全體數據</button>
+                <h2 class="text-xl font-black">實時監控牆</h2>
+                <button id="clearAllBtn" class="bg-red-500 text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg">重置數據</button>
             </div>
             <div id="monitorGrid" class="grid grid-cols-2 md:grid-cols-6 gap-3"></div>
         </div>
@@ -45,90 +44,89 @@
         <div class="main-card p-6 md:p-10">
             <div class="text-center mb-8">
                 <h1 class="text-xl md:text-2xl font-black text-slate-800 mb-4 flex items-center justify-center flex-wrap gap-2">
-                    2025年與 <input type="number" id="yearInp" class="year-input-box" placeholder="____"> 年香港氣溫對比
+                    2025年與 <input type="number" id="yearInp" class="year-input-box" placeholder="____"> 年氣溫比較
                 </h1>
                 <div id="groupSelector" class="scroll-container justify-start md:justify-center"></div>
             </div>
 
             <div id="studentInputArea" class="space-y-4 mb-8">
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row items-center gap-4">
-                    <span class="font-black text-slate-400 min-w-[120px]">2025年對照:</span>
+                    <span class="font-black text-slate-400 min-w-[120px]">2025對照:</span>
                     <div class="scroll-container w-full" id="refGrid"></div>
                 </div>
                 <div id="inputBoxWrapper" class="p-4 rounded-2xl border-4 flex flex-col md:flex-row items-center gap-4 transition-all">
-                    <span id="groupLabel" class="font-black min-w-[120px]">組別數據:</span>
+                    <span id="groupLabel" class="font-black min-w-[120px]">數據輸入:</span>
                     <div class="scroll-container w-full" id="inputGrid"></div>
                 </div>
             </div>
 
-            <div class="relative h-[450px] w-full">
+            <div class="relative h-[480px] w-full bg-white rounded-xl">
                 <canvas id="mainChart"></canvas>
             </div>
         </div>
     </div>
 
     <script>
-        const CONFIG = {
-            BIN_ID: '69d739df36566621a892d521',
+        const API = {
+            BIN: '69d739df36566621a892d521',
             KEY: '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu870',
             REF: [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2],
             COLORS: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
         };
 
-        let state = {
-            isTeacher: false,
-            gid: 0,
-            groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }))
-        };
+        let state = { gid: 0, isTeacher: false, groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) })), lastSync: '' };
+        let saveTimeout = null;
 
-        // 初始化圖表
         const chart = new Chart(document.getElementById('mainChart').getContext('2d'), {
             type: 'line',
             data: {
-                labels: ['1','2','3','4','5','6','7','8','9','10','11','12'].map(m => m+'月'),
+                labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
                 datasets: [
-                    { label: '2025年', data: CONFIG.REF, borderColor: '#CBD5E1', borderDash: [5,5], tension: 0.1 },
+                    { label: '2025年', data: API.REF, borderColor: '#CBD5E1', borderDash: [5,5], pointStyle: 'crossRot', pointRadius: 6, tension: 0.1 },
                     ...Array.from({length: 6}, (_, i) => ({
-                        label: `第${i+1}組`, data: [], borderColor: CONFIG.COLORS[i], borderWidth: 3, tension: 0.1, hidden: true
+                        label: `第${i+1}組`, data: [], borderColor: API.COLORS[i], backgroundColor: API.COLORS[i],
+                        borderWidth: 3, pointStyle: 'crossRot', pointRadius: 8, tension: 0.1, hidden: true
                     }))
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 10, max: 40 } } }
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { offset: true, grid: { display: false } },
+                    y: { min: 10, max: 40 } 
+                },
+                plugins: { legend: { labels: { usePointStyle: true } } }
+            }
         });
 
-        // 核心：從雲端抓數據
-        async function loadCloud() {
+        // 核心：同步機制 (包含防消失合併邏輯)
+        async function sync(isUpload = false) {
+            if (isUpload) setStatus('○ 同步中...', 'bg-blue-400');
             try {
-                const r = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': CONFIG.KEY },
-                    cache: 'no-store'
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${API.BIN}/latest?t=${Date.now()}`, {
+                    headers: { 'X-Master-Key': API.KEY }, cache: 'no-store'
                 });
-                const d = await r.json();
-                state.groups = d.record.groups || d.record;
-                updateUI();
-                setStatus('● 已連線', 'bg-green-500');
-            } catch (e) { setStatus('❌ 連線失敗', 'bg-red-500'); }
-        }
+                const d = await res.json();
+                let remoteGroups = d.record.groups;
 
-        // 核心：推送到雲端
-        async function saveCloud() {
-            setStatus('○ 同步中...', 'bg-blue-400');
-            try {
-                // 先拿最新的，避免覆蓋別組
-                const r = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}/latest`, { headers: { 'X-Master-Key': CONFIG.KEY } });
-                const d = await r.json();
-                let remote = d.record.groups || d.record;
-                
-                // 只更新自己那組
-                remote[state.gid] = state.groups[state.gid];
-
-                await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.KEY },
-                    body: JSON.stringify({ groups: remote })
-                });
-                setStatus('● 已儲存', 'bg-green-500');
-            } catch (e) { setStatus('❌ 儲存失敗', 'bg-red-500'); }
+                if (isUpload) {
+                    // 合併邏輯：保留遠端其他組的數據，只更新自己這組
+                    remoteGroups[state.gid] = state.groups[state.gid];
+                    await fetch(`https://api.jsonbin.io/v3/b/${API.BIN}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API.KEY },
+                        body: JSON.stringify({ groups: remoteGroups })
+                    });
+                    setStatus('● 已儲存', 'bg-green-500');
+                } else {
+                    // 下載邏輯：如果當前沒在輸入，就更新本地數據
+                    if (document.activeElement.tagName !== 'INPUT') {
+                        state.groups = remoteGroups;
+                        refreshUI();
+                    }
+                }
+                setStatus('● 已同步', 'bg-green-500');
+            } catch (e) { setStatus('❌ 連線不穩', 'bg-red-500'); }
         }
 
         function setStatus(txt, cls) {
@@ -136,136 +134,120 @@
             document.getElementById('statusDot').className = 'status-dot ' + cls;
         }
 
-        function updateUI() {
+        function refreshUI() {
             const current = state.groups[state.gid];
-            const color = CONFIG.COLORS[state.gid];
+            const color = API.COLORS[state.gid];
 
             if (!state.isTeacher) {
-                // 更新年份輸入框
                 const yInp = document.getElementById('yearInp');
                 if (document.activeElement !== yInp) yInp.value = current.year || '';
-                
-                // 更新組別標籤
                 document.getElementById('groupLabel').innerText = (current.year || '____') + '年數據:';
                 document.getElementById('groupLabel').style.color = color;
                 document.getElementById('inputBoxWrapper').style.borderColor = color;
-
                 renderGrids();
             }
-
             renderGroupBtns();
             renderMonitor();
-            updateChart();
+            updateChartOnly();
         }
 
         function renderGrids() {
-            // 對照組
             const rg = document.getElementById('refGrid');
-            if (rg.children.length === 0) {
-                CONFIG.REF.forEach((v, i) => rg.innerHTML += `<div class="text-center"><div class="text-[10px] font-bold text-slate-300">${i+1}月</div><div class="w-14 h-10 flex items-center justify-center bg-white rounded-lg text-xs border border-slate-100">${v}°</div></div>`);
+            if (rg.innerHTML === '') {
+                API.REF.forEach((v, i) => rg.innerHTML += `<div class="text-center"><div class="text-[10px] font-bold text-slate-300">${i+1}月</div><div class="w-14 h-10 flex items-center justify-center bg-white rounded-lg text-xs border border-slate-100">${v}°</div></div>`);
             }
-            // 輸入組
             const ig = document.getElementById('inputGrid');
             ig.innerHTML = '';
             state.groups[state.gid].data.forEach((v, i) => {
                 ig.innerHTML += `<div class="text-center">
-                    <div class="text-[10px] font-bold" style="color:${CONFIG.COLORS[state.gid]}">${i+1}月</div>
+                    <div class="text-[10px] font-bold" style="color:${API.COLORS[state.gid]}">${i+1}月</div>
                     <input type="number" step="0.1" class="month-input" value="${v||''}" 
-                        onchange="state.groups[state.gid].data[${i}]=this.value===''?null:parseFloat(this.value); updateChart(); saveCloud();">
+                        oninput="handleInput(${i}, this.value)">
                 </div>`;
             });
         }
 
+        // 輸入防抖：避免頻繁切換導致覆蓋
+        function handleInput(index, val) {
+            state.groups[state.gid].data[index] = val === '' ? null : parseFloat(val);
+            updateChartOnly();
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => sync(true), 1500); // 停止輸入1.5秒後才上傳
+        }
+
         function renderGroupBtns() {
             const c = document.getElementById('groupSelector');
-            if (c.children.length > 0) {
-                Array.from(c.children).forEach((b, i) => {
-                    b.className = `flex-shrink-0 px-5 py-2 rounded-xl border-2 font-black text-sm transition-all ${i===state.gid ? 'text-white' : ''}`;
-                    b.style.borderColor = CONFIG.COLORS[i];
-                    b.style.backgroundColor = i===state.gid ? CONFIG.COLORS[i] : 'transparent';
-                    b.style.color = i===state.gid ? 'white' : CONFIG.COLORS[i];
+            if (c.children.length === 0) {
+                state.groups.forEach((_, i) => {
+                    const b = document.createElement('button');
+                    b.innerText = `第 ${i+1} 組`;
+                    b.onclick = () => { state.gid = i; refreshUI(); sync(); };
+                    c.appendChild(b);
                 });
-                return;
             }
-            state.groups.forEach((_, i) => {
-                const b = document.createElement('button');
-                b.innerText = `第 ${i+1} 組`;
-                b.onclick = () => { state.gid = i; updateUI(); };
-                c.appendChild(b);
+            Array.from(c.children).forEach((b, i) => {
+                const active = (i === state.gid);
+                b.className = `flex-shrink-0 px-6 py-2 rounded-xl border-2 font-black text-sm transition-all`;
+                b.style.borderColor = API.COLORS[i];
+                b.style.backgroundColor = active ? API.COLORS[i] : 'transparent';
+                b.style.color = active ? 'white' : API.COLORS[i];
             });
         }
 
         function renderMonitor() {
             const g = document.getElementById('monitorGrid');
-            g.innerHTML = '';
+            if(!g) return; g.innerHTML = '';
             state.groups.forEach((group, i) => {
                 const count = group.data.filter(d => d !== null).length;
-                g.innerHTML += `
-                    <div class="bg-white/10 p-3 rounded-2xl border border-white/5 text-center">
-                        <div class="text-[10px] font-bold" style="color:${CONFIG.COLORS[i]}">GROUP ${i+1}</div>
-                        <div class="text-sm font-black my-1">${group.year || '----'}</div>
-                        <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                            <div class="h-full" style="width:${(count/12)*100}%; background-color:${CONFIG.COLORS[i]}"></div>
-                        </div>
-                    </div>`;
+                g.innerHTML += `<div class="bg-white/10 p-3 rounded-2xl border border-white/5 text-center">
+                    <div class="text-[10px] font-bold" style="color:${API.COLORS[i]}">G${i+1}</div>
+                    <div class="text-sm font-black my-1">${group.year || '----'}</div>
+                    <div class="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                        <div class="h-full" style="width:${(count/12)*100}%; background-color:${API.COLORS[i]}"></div>
+                    </div></div>`;
             });
         }
 
-        function updateChart() {
+        function updateChartOnly() {
             chart.data.datasets.forEach((ds, i) => {
                 if (i === 0) return;
                 const gData = state.groups[i-1];
                 ds.data = gData.data;
                 ds.label = gData.year ? `${gData.year}年 (第${i}組)` : `第${i}組`;
                 ds.hidden = state.isTeacher ? false : (i-1 !== state.gid);
+                ds.pointStyle = 'crossRot';
             });
             chart.update('none');
         }
 
-        // 老師認證與模式切換
         document.getElementById('modeT').onclick = () => {
-            const p = prompt("請輸入老師密碼:");
+            const p = prompt("老師密碼:");
             if (p === "123456") {
                 state.isTeacher = true;
                 document.getElementById('teacherView').classList.remove('hidden');
                 document.getElementById('studentInputArea').classList.add('hidden');
-                document.getElementById('modeT').classList.add('bg-white', 'shadow-sm');
-                document.getElementById('modeS').classList.remove('bg-white', 'shadow-sm');
-                loadCloud();
-                setInterval(loadCloud, 3000); // 老師模式每 3 秒自動抓取
+                refreshUI();
+                setInterval(() => sync(false), 3000); // 老師模式自動更新
             }
         };
-        document.getElementById('modeS').onclick = () => {
-            location.reload(); // 簡單重整回學生模式
-        };
 
-        // 清空功能
         document.getElementById('clearAllBtn').onclick = async () => {
-            if (!confirm("確定要清空全班數據嗎？")) return;
-            const empty = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
-            try {
-                await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.BIN_ID}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.KEY },
-                    body: JSON.stringify({ groups: empty })
-                });
-                state.groups = empty;
-                updateUI();
-                alert("數據已清空");
-            } catch (e) { alert("清空失敗"); }
+            if (!confirm("確定重置？")) return;
+            state.groups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
+            await sync(true);
+            refreshUI();
         };
 
-        // 年份輸入同步
-        document.getElementById('yearInp').onchange = (e) => {
+        document.getElementById('yearInp').oninput = (e) => {
             state.groups[state.gid].year = e.target.value;
-            updateUI();
-            saveCloud();
+            document.getElementById('groupLabel').innerText = (e.target.value || '____') + '年數據:';
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => sync(true), 1500);
         };
 
-        // 初始化
-        loadCloud();
-        // 學生模式也每 15 秒同步一次（防掉線）
-        setInterval(() => { if(!state.isTeacher) loadCloud(); }, 15000);
+        // 啟動
+        sync();
+        setInterval(() => { if(!state.isTeacher && document.activeElement.tagName !== 'INPUT') sync(false); }, 10000);
     </script>
 </body>
 </html>
