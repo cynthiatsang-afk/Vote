@@ -29,7 +29,7 @@
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-6">
         <div class="bg-indigo-100 text-indigo-600 px-4 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase">CLIMATE ANALYSIS TOOL</div>
         <div class="flex items-center gap-3">
-            <div id="syncStatus" class="text-[10px] font-bold text-slate-400 italic">同步中...</div>
+            <div id="syncStatus" class="text-[10px] font-bold text-slate-400 italic">準備中...</div>
             <div class="btn-mode-toggle flex text-sm">
                 <button id="btnStudent" class="active">學生</button>
                 <button id="btnTeacher">老師 🔒</button>
@@ -102,6 +102,7 @@
             isTeacher: false,
             activeGroup: 0,
             visibleGroups: new Array(6).fill(true),
+            lastSyncTime: 0, // 用於檢測是否被清空
             groups: Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }))
         };
 
@@ -120,45 +121,54 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40, title: { display: true, text: '溫度 (°C)' } } } }
         });
 
+        // 強化版抓取邏輯
         async function fetchCloudData() {
             try {
-                // 加入時間戳避免快取舊數據
-                const res = await fetch(`${API_URL}/latest?t=${Date.now()}`, { 
-                    headers: { 'X-Master-Key': MASTER_KEY },
-                    cache: 'no-store'
+                const res = await fetch(`${API_URL}/latest?nocache=${Date.now()}`, { 
+                    headers: { 'X-Master-Key': MASTER_KEY }
                 });
                 const json = await res.json();
-                if (json.record && Array.isArray(json.record)) {
-                    state.groups = json.record;
-                    document.getElementById('syncStatus').innerText = '● 同步中';
-                    document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
-                    renderMonitor();
-                    updateChart();
-                    if (!state.isTeacher) renderGrids(); // 學生模式下更新數值
+                const record = json.record;
+
+                // 檢查是否被老師清空 (檢測 year 和數據是否全部為空)
+                const isCloudEmpty = record.every(g => g.year === '' && g.data.every(d => d === null));
+                
+                state.groups = record;
+                document.getElementById('syncStatus').innerText = '● 已同步';
+                document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
+                
+                renderMonitor();
+                updateChart();
+                if (!state.isTeacher) {
+                    const yInp = document.getElementById('yearInput');
+                    if (yInp && document.activeElement !== yInp) yInp.value = state.groups[state.activeGroup].year;
+                    renderGrids();
                 }
             } catch (e) { console.error('抓取失敗', e); }
         }
 
-        let debounceTimer;
-        function pushCloudData() {
-            document.getElementById('syncStatus').innerText = '○ 儲存中...';
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(async () => {
-                try {
-                    const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
-                    const json = await res.json();
-                    let latestGroups = json.record;
-                    latestGroups[state.activeGroup] = state.groups[state.activeGroup];
+        // 強化版推算邏輯：確保合併而非覆蓋
+        async function pushCloudData() {
+            document.getElementById('syncStatus').innerText = '○ 同步中...';
+            try {
+                // 1. 先拿最新的全體數據
+                const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
+                const json = await res.json();
+                let latestCloud = json.record;
 
-                    await fetch(API_URL, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-                        body: JSON.stringify(latestGroups)
-                    });
-                    document.getElementById('syncStatus').innerText = '● 已儲存';
-                    updateChart();
-                } catch (e) { document.getElementById('syncStatus').innerText = '❌ 失敗'; }
-            }, 800); 
+                // 2. 只把目前這組的資料塞進去最新數據中
+                latestCloud[state.activeGroup] = state.groups[state.activeGroup];
+
+                // 3. 推回雲端
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+                    body: JSON.stringify(latestCloud)
+                });
+                document.getElementById('syncStatus').innerText = '● 已同步';
+            } catch (e) { 
+                document.getElementById('syncStatus').innerText = '❌ 同步失敗';
+            }
         }
 
         function syncUI() {
@@ -223,34 +233,51 @@
                 });
             }
             
-            // 學生輸入區
-            inputGrid.innerHTML = '';
-            state.groups[state.activeGroup].data.forEach((val, i) => {
-                inputGrid.innerHTML += `<div class="flex flex-col items-center">
-                    <span class="text-[11px] font-bold mb-1" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
-                    <input type="number" step="0.1" class="month-input" value="${val !== null ? val : ''}" 
-                        oninput="state.groups[state.activeGroup].data[${i}] = this.value === '' ? null : parseFloat(this.value); updateChart(); pushCloudData();">
-                </div>`;
-            });
+            // 避免在輸入時重繪
+            if (inputGrid.dataset.group !== String(state.activeGroup)) {
+                inputGrid.innerHTML = '';
+                state.groups[state.activeGroup].data.forEach((val, i) => {
+                    inputGrid.innerHTML += `<div class="flex flex-col items-center">
+                        <span class="text-[11px] font-bold mb-1" style="color:${COLORS[state.activeGroup]}">${i+1}月</span>
+                        <input type="number" step="0.1" class="month-input" value="${val !== null ? val : ''}" 
+                            oninput="state.groups[state.activeGroup].data[${i}] = this.value === '' ? null : parseFloat(this.value); updateChart(); pushCloudData();">
+                    </div>`;
+                });
+                inputGrid.dataset.group = state.activeGroup;
+            } else {
+                // 如果是同一組，只更新數值而不重繪，以免跳出焦點
+                const inps = inputGrid.querySelectorAll('input');
+                state.groups[state.activeGroup].data.forEach((val, i) => {
+                    if (document.activeElement !== inps[i]) inps[i].value = (val !== null ? val : '');
+                });
+            }
             document.getElementById('inputLabelYear').innerText = `${state.groups[state.activeGroup].year || '_______'}年輸入`;
         }
 
         function renderGroupBtns() {
             const container = document.getElementById('groupButtons');
+            if (container.children.length > 0) return; // 避免重複渲染按鈕
             container.innerHTML = '';
             state.groups.forEach((_, i) => {
+                container.innerHTML += `<button onclick="state.activeGroup=${i}; document.getElementById('inputDataGrid').dataset.group='none'; syncUI();" class="flex-shrink-0 px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm group-btn" 
+                    data-idx="${i}">第${['一','二','三','四','五','六'][i]}組</button>`;
+            });
+            updateBtnStyles();
+        }
+
+        function updateBtnStyles() {
+            document.querySelectorAll('.group-btn').forEach((btn, i) => {
                 const active = i === state.activeGroup;
-                container.innerHTML += `<button onclick="state.activeGroup=${i}; syncUI();" class="flex-shrink-0 px-6 py-3 rounded-2xl border-2 font-bold transition-all text-sm" 
-                    style="border-color:${active ? COLORS[i] : '#F1F5F9'}; background-color:${active ? COLORS[i] : 'white'}; color:${active ? 'white' : '#94A3B8'}">第${['一','二','三','四','五','六'][i]}組</button>`;
+                btn.style.borderColor = active ? COLORS[i] : '#F1F5F9';
+                btn.style.backgroundColor = active ? COLORS[i] : 'white';
+                btn.style.color = active ? 'white' : '#94A3B8';
             });
         }
 
         function updateChart() {
-            if (!chart) return;
             chart.data.datasets.forEach((ds, i) => {
-                if (i === 0) {
-                    ds.hidden = !document.getElementById('toggleRef').checked;
-                } else {
+                if (i === 0) ds.hidden = !document.getElementById('toggleRef').checked;
+                else {
                     const gData = state.groups[i-1];
                     ds.data = [...gData.data];
                     ds.label = (gData.year ? gData.year + "年" : `第${i}組`);
@@ -258,10 +285,10 @@
                     else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
                 }
             });
-            chart.update('none'); 
+            chart.update('none');
+            updateBtnStyles();
         }
 
-        // --- 老師認證 ---
         document.getElementById('btnTeacher').onclick = () => document.getElementById('authModal').style.display='flex';
         document.getElementById('btnStudent').onclick = () => { 
             state.isTeacher=false; 
@@ -275,41 +302,29 @@
                 state.isTeacher = true; document.getElementById('authModal').style.display='none';
                 document.getElementById('btnTeacher').classList.add('active'); document.getElementById('btnStudent').classList.remove('active');
                 syncUI();
-                // 進入老師模式後才開啟自動刷新
-                setInterval(fetchCloudData, 5000);
+                setInterval(fetchCloudData, 5000); // 老師模式自動抓取
             }
         };
 
-        // --- 修正後的終極清空按鈕 ---
+        // 徹底清空邏輯
         document.getElementById('btnClearData').onclick = async () => {
-            if (!confirm('【警告】這將清空所有 6 組的數據，確定嗎？')) return;
-
-            clearTimeout(debounceTimer); // 停掉任何傳送中的儲存任務
-            const emptyGroups = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
-            
-            document.getElementById('syncStatus').innerText = '○ 正在重置雲端...';
-            
+            if (!confirm('將永久刪除所有學生的數據，確定嗎？')) return;
+            const empty = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
+            document.getElementById('syncStatus').innerText = '○ 重置中...';
             try {
-                const response = await fetch(API_URL, {
+                await fetch(API_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-                    body: JSON.stringify(emptyGroups)
+                    body: JSON.stringify(empty)
                 });
-
-                if (response.ok) {
-                    state.groups = emptyGroups; // 立即同步本地狀態
-                    updateChart();
-                    renderMonitor();
-                    document.getElementById('syncStatus').innerText = '● 數據已完全清空';
-                    alert('已成功清空所有數據！');
-                }
-            } catch (e) {
-                alert('清空失敗，請檢查網路！');
-                console.error(e);
-            }
+                state.groups = empty;
+                syncUI();
+                alert('數據已清空！');
+            } catch (e) { alert('清空失敗'); }
         };
 
         fetchCloudData();
+        setInterval(fetchCloudData, 10000); // 學生也每10秒抓一次別人的資料
         syncUI();
     </script>
 </body>
