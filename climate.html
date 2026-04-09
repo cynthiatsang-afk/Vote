@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港氣候分析工具</title>
+    <title>香港氣候 analysis 工具</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -39,13 +39,15 @@
 
     <div class="max-w-6xl mx-auto">
         <div id="teacherDashboard" class="hidden teacher-monitor">
-            <h2 class="text-xl font-black mb-6">組別實時進度 (每5秒更新)</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black">組別實時進度 (每5秒更新)</h2>
+                <button id="btnClearData" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-lg transition-all">清空所有數據</button>
+            </div>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="monitorGrid"></div>
         </div>
 
         <div class="main-card p-6 md:p-12 text-center">
-            <h1 id="mainTitle" class="text-2xl md:text-4xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap">
-                </h1>
+            <h1 id="mainTitle" class="text-2xl md:text-4xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap"></h1>
 
             <div id="groupButtonsContainer" class="mb-10">
                 <div id="groupButtons" class="scroll-x-container justify-start md:justify-center"></div>
@@ -120,9 +122,7 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40 } } }
         });
 
-        // --- 修正後的同步邏輯 ---
-
-        // 抓取全體數據 (增加 no-cache 確保不會抓到舊資料)
+        // --- 同步邏輯 ---
         async function fetchCloudData() {
             try {
                 const res = await fetch(`${API_URL}/latest`, { 
@@ -134,46 +134,33 @@
                     state.groups = json.record;
                     document.getElementById('syncStatus').innerText = '● 雲端同步中';
                     document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
-                    
-                    // 同步後僅更新監控面板和圖表，不重繪輸入區避免閃爍
                     renderMonitor();
                     updateChart();
                 }
             } catch (e) { console.error('抓取失敗', e); }
         }
 
-        // 儲存邏輯：抓取 -> 插入自己那組 -> 覆蓋回雲端
         let debounceTimer;
         function pushCloudData() {
             document.getElementById('syncStatus').innerText = '○ 正在儲存...';
             clearTimeout(debounceTimer);
-            
             debounceTimer = setTimeout(async () => {
                 try {
-                    // 先抓最新
                     const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
                     const json = await res.json();
                     let latestGroups = json.record;
-
-                    // 只更新當前操作組
                     latestGroups[state.activeGroup] = state.groups[state.activeGroup];
-
-                    // 回傳雲端
                     await fetch(API_URL, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
                         body: JSON.stringify(latestGroups)
                     });
                     document.getElementById('syncStatus').innerText = '● 已儲存到雲端';
-                } catch (e) { 
-                    console.error('儲存失敗', e);
-                    document.getElementById('syncStatus').innerText = '❌ 儲存失敗';
-                }
+                } catch (e) { document.getElementById('syncStatus').innerText = '❌ 儲存失敗'; }
             }, 800); 
         }
 
         // --- UI 控制 ---
-
         function syncUI() {
             const currentGroup = state.groups[state.activeGroup];
             const color = COLORS[state.activeGroup];
@@ -198,9 +185,8 @@
                 document.getElementById('groupButtonsContainer').style.display = 'block';
             }
 
-            const wrapper = document.getElementById('inputSectionWrapper');
             if (!state.isTeacher) {
-                wrapper.style.borderColor = color;
+                document.getElementById('inputSectionWrapper').style.borderColor = color;
                 document.getElementById('groupRectIcon').style.backgroundColor = color;
                 document.getElementById('inputLabelYear').style.color = color;
                 renderGrids();
@@ -266,7 +252,7 @@
                     else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
                 }
             });
-            chart.update('none'); // 使用 'none' 模式避免頻繁刷新動畫
+            chart.update('none');
         }
 
         // --- 事件綁定 ---
@@ -283,11 +269,28 @@
                 state.isTeacher = true; document.getElementById('authModal').style.display='none';
                 document.getElementById('btnTeacher').classList.add('active'); document.getElementById('btnStudent').classList.remove('active');
                 syncUI();
-                setInterval(fetchCloudData, 5000); // 老師模式自動抓取
+                setInterval(fetchCloudData, 5000);
             }
         };
 
-        // 啟動加載
+        // --- 老師清空按鈕邏輯 ---
+        document.getElementById('btnClearData').onclick = async () => {
+            if (confirm('確定要清空所有組別的輸入內容嗎？此操作無法還原。')) {
+                const emptyData = Array.from({length: 6}, () => ({ year: '', data: new Array(12).fill(null) }));
+                document.getElementById('syncStatus').innerText = '○ 正在重置數據...';
+                try {
+                    await fetch(API_URL, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+                        body: JSON.stringify(emptyData)
+                    });
+                    state.groups = emptyData;
+                    syncUI();
+                    document.getElementById('syncStatus').innerText = '● 數據已清空';
+                } catch (e) { alert('清空失敗，請檢查網路連線。'); }
+            }
+        };
+
         fetchCloudData();
         syncUI();
     </script>
