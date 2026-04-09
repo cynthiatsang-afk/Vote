@@ -45,10 +45,7 @@
 
         <div class="main-card p-6 md:p-12 text-center">
             <h1 id="mainTitle" class="text-2xl md:text-4xl font-black text-slate-800 mb-8 flex items-center justify-center flex-wrap">
-                <span id="titlePrefix">2025年與</span>
-                <input type="number" id="yearInput" class="year-input-box" placeholder="____">
-                <span id="titleSuffix">年香港各月溫度變化比較</span>
-            </h1>
+                </h1>
 
             <div id="groupButtonsContainer" class="mb-10">
                 <div id="groupButtons" class="scroll-x-container justify-start md:justify-center"></div>
@@ -59,7 +56,7 @@
                     <div class="flex items-center gap-3 min-w-[180px]">
                         <span class="rect-icon bg-slate-400"></span>
                         <span class="text-slate-500 font-black text-base whitespace-nowrap">2025年對照數據</span>
-                        <input type="checkbox" checked id="toggleRef" class="w-5 h-5 accent-slate-400">
+                        <input type="checkbox" checked id="toggleRef" class="w-5 h-5 accent-slate-400" onchange="updateChart()">
                     </div>
                     <div class="flex-1 w-full overflow-hidden"><div class="scroll-x-container" id="refDataGrid"></div></div>
                 </div>
@@ -68,7 +65,7 @@
                     <div class="flex items-center gap-3 min-w-[180px]">
                         <span id="groupRectIcon" class="rect-icon"></span>
                         <span id="inputLabelYear" class="font-black text-base underline decoration-2 whitespace-nowrap">_______年輸入</span>
-                        <input type="checkbox" checked id="toggleUser" class="w-5 h-5">
+                        <input type="checkbox" checked id="toggleUser" class="w-5 h-5" onchange="updateChart()">
                     </div>
                     <div class="flex-1 w-full overflow-hidden"><div class="scroll-x-container" id="inputDataGrid"></div></div>
                 </div>
@@ -94,7 +91,7 @@
     <script>
         // --- Jsonbin 設定 ---
         const BIN_ID = '69d739df36566621a892d521';
-        const MASTER_KEY = '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu87O';
+        const MASTER_KEY = '$2a$10$.w6XUpJt3wavovTW/qygte1GU1N1LDAWvt7nLGdBlV96W47JKu870';
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
         const REF_TEMPS = [17.1, 17.3, 20.1, 23.7, 27.2, 28.9, 29.5, 29.0, 29.3, 27.4, 22.3, 20.2];
@@ -123,35 +120,56 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'top' } }, scales: { y: { min: 10, max: 40 } } }
         });
 
-        // --- 同步邏輯 ---
+        // --- 修正後的同步邏輯 ---
 
-        // 從雲端抓取最新數據
+        // 抓取全體數據 (增加 no-cache 確保不會抓到舊資料)
         async function fetchCloudData() {
             try {
-                const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
+                const res = await fetch(`${API_URL}/latest`, { 
+                    headers: { 'X-Master-Key': MASTER_KEY },
+                    cache: 'no-store'
+                });
                 const json = await res.json();
-                state.groups = json.record;
-                document.getElementById('syncStatus').innerText = '● 雲端同步中';
-                document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
-                syncUI();
+                if (json.record && Array.isArray(json.record)) {
+                    state.groups = json.record;
+                    document.getElementById('syncStatus').innerText = '● 雲端同步中';
+                    document.getElementById('syncStatus').className = 'text-[10px] font-bold text-green-500';
+                    
+                    // 同步後僅更新監控面板和圖表，不重繪輸入區避免閃爍
+                    renderMonitor();
+                    updateChart();
+                }
             } catch (e) { console.error('抓取失敗', e); }
         }
 
-        // 上傳數據到雲端 (防抖處理，避免過於頻繁請求)
+        // 儲存邏輯：抓取 -> 插入自己那組 -> 覆蓋回雲端
         let debounceTimer;
         function pushCloudData() {
             document.getElementById('syncStatus').innerText = '○ 正在儲存...';
             clearTimeout(debounceTimer);
+            
             debounceTimer = setTimeout(async () => {
                 try {
+                    // 先抓最新
+                    const res = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
+                    const json = await res.json();
+                    let latestGroups = json.record;
+
+                    // 只更新當前操作組
+                    latestGroups[state.activeGroup] = state.groups[state.activeGroup];
+
+                    // 回傳雲端
                     await fetch(API_URL, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-                        body: JSON.stringify(state.groups)
+                        body: JSON.stringify(latestGroups)
                     });
                     document.getElementById('syncStatus').innerText = '● 已儲存到雲端';
-                } catch (e) { console.error('儲存失敗', e); }
-            }, 1000); 
+                } catch (e) { 
+                    console.error('儲存失敗', e);
+                    document.getElementById('syncStatus').innerText = '❌ 儲存失敗';
+                }
+            }, 800); 
         }
 
         // --- UI 控制 ---
@@ -159,17 +177,20 @@
         function syncUI() {
             const currentGroup = state.groups[state.activeGroup];
             const color = COLORS[state.activeGroup];
-            
             const mainTitle = document.getElementById('mainTitle');
+            
             if (state.isTeacher) {
                 mainTitle.innerHTML = '過去40年香港各月溫度的變化';
                 document.getElementById('teacherDashboard').classList.remove('hidden');
                 document.getElementById('dataInputArea').style.display = 'none';
                 document.getElementById('groupButtonsContainer').style.display = 'none';
             } else {
-                mainTitle.innerHTML = `2025年與 <input type="number" id="yearInput" class="year-input-box" value="${currentGroup.year}" placeholder="____"> 年香港各月溫度變化比較`;
-                document.getElementById('yearInput').oninput = (e) => {
+                mainTitle.innerHTML = `2025年與 <input type="number" id="yearInput" class="year-input-box" placeholder="____"> 年香港各月溫度變化比較`;
+                const yInp = document.getElementById('yearInput');
+                yInp.value = currentGroup.year || '';
+                yInp.oninput = (e) => {
                     state.groups[state.activeGroup].year = e.target.value;
+                    document.getElementById('inputLabelYear').innerText = `${e.target.value || '_______'}年輸入`;
                     pushCloudData();
                 };
                 document.getElementById('teacherDashboard').classList.add('hidden');
@@ -191,6 +212,7 @@
 
         function renderMonitor() {
             const grid = document.getElementById('monitorGrid');
+            if (!grid) return;
             grid.innerHTML = '';
             state.groups.forEach((g, i) => {
                 const filled = g.data.filter(d => d !== null).length;
@@ -239,30 +261,35 @@
                 if (i === 0) ds.hidden = !document.getElementById('toggleRef').checked;
                 else {
                     ds.data = state.groups[i-1].data;
-                    ds.label = (state.groups[i-1].year || `第${i}組`) + "年";
+                    ds.label = (state.groups[i-1].year || `第${i}組`) + (state.groups[i-1].year ? "年" : "");
                     if (state.isTeacher) ds.hidden = !state.visibleGroups[i-1];
                     else ds.hidden = (i-1 !== state.activeGroup) || !document.getElementById('toggleUser').checked;
                 }
             });
-            chart.update();
+            chart.update('none'); // 使用 'none' 模式避免頻繁刷新動畫
         }
 
         // --- 事件綁定 ---
         document.getElementById('btnTeacher').onclick = () => document.getElementById('authModal').style.display='flex';
-        document.getElementById('btnStudent').onclick = () => { state.isTeacher=false; document.getElementById('btnStudent').classList.add('active'); document.getElementById('btnTeacher').classList.remove('active'); syncUI(); };
+        document.getElementById('btnStudent').onclick = () => { 
+            state.isTeacher=false; 
+            document.getElementById('btnStudent').classList.add('active'); 
+            document.getElementById('btnTeacher').classList.remove('active'); 
+            syncUI(); 
+        };
         document.getElementById('cancelAuth').onclick = () => document.getElementById('authModal').style.display='none';
         document.getElementById('confirmAuth').onclick = () => {
             if(document.getElementById('passField').value === "123456") {
                 state.isTeacher = true; document.getElementById('authModal').style.display='none';
                 document.getElementById('btnTeacher').classList.add('active'); document.getElementById('btnStudent').classList.remove('active');
                 syncUI();
-                // 老師模式下，每5秒抓一次最新數據
-                setInterval(fetchCloudData, 5000);
+                setInterval(fetchCloudData, 5000); // 老師模式自動抓取
             }
         };
 
         // 啟動加載
         fetchCloudData();
+        syncUI();
     </script>
 </body>
 </html>
