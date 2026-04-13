@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分數小廚師：十關大挑戰 | 互動學習平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        :root {
+            --primary: #f59e0b;
+            --secondary: #d97706;
+            --accent: #10b981;
+            --bg: #fffbeb;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg);
+            color: #451a03;
+            overflow-x: hidden;
+        }
+
+        /* 分數輸入 UI */
+        .fraction-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-number {
+            width: 100px;
+            height: 80px;
+            text-align: center;
+            font-size: 2.8rem;
+            font-weight: 900;
+            border: 5px solid var(--primary);
+            border-radius: 24px;
+            background: white;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #b45309;
+        }
+
+        .input-number:focus {
+            outline: none;
+            border-color: var(--secondary);
+            transform: scale(1.1);
+            box-shadow: 0 10px 20px rgba(217, 119, 6, 0.2);
+        }
+
+        .fraction-divider {
+            width: 120px;
+            height: 8px;
+            background-color: #451a03;
+            border-radius: 4px;
+        }
+
+        /* 導航與按鈕 */
+        .nav-btn {
+            padding: 10px 24px;
+            border-radius: 9999px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .nav-btn.active {
+            background-color: var(--secondary);
+            color: white;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 動畫效果 */
+        .page-transition {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            border: 2px solid #d1d5db;
+            transition: all 0.4s;
+        }
+
+        .progress-dot.current {
+            background-color: var(--primary);
+            border-color: var(--secondary);
+            transform: scale(1.3);
+        }
+
+        .progress-dot.done {
+            background-color: var(--accent);
+            border-color: #059669;
+        }
+
+        /* SVG 圖形動畫 */
+        .slice {
+            transition: fill 0.4s, opacity 0.4s;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 網站頂部導航 -->
+    <header class="bg-amber-500 text-white shadow-xl sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchMode('explore')">
+                <span class="text-4xl">👨‍🍳</span>
+                <h1 class="text-2xl font-black tracking-tight">分數小廚師 <span class="text-amber-200 text-sm block sm:inline font-bold">互動教學平台</span></h1>
+            </div>
+            <nav class="flex bg-amber-600 rounded-full p-1 shadow-inner">
+                <button onclick="switchMode('explore')" id="btn-nav-explore" class="nav-btn active">自由探索模式</button>
+                <button onclick="switchMode('challenge')" id="btn-nav-challenge" class="nav-btn bg-white text-amber-600 ml-1">十關大挑戰</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow container mx-auto px-4 py-10">
+        
+        <!-- 探索模式區塊 -->
+        <section id="section-explore" class="page-transition grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <!-- 左側：控制面板 -->
+            <div class="bg-white p-8 rounded-[40px] shadow-2xl border-b-[12px] border-amber-100">
+                <h2 class="text-2xl font-black text-amber-800 mb-6 flex items-center gap-2">
+                    <span class="bg-amber-100 p-2 rounded-xl">Step 1</span> 挑選形狀
+                </h2>
+                <div class="grid grid-cols-3 gap-3 mb-10">
+                    <button onclick="updateShape('circle')" id="shape-circle" class="flex flex-col items-center p-4 rounded-2xl border-4 border-amber-500 bg-amber-50 shadow-md">
+                        <span class="text-4xl mb-2">🍕</span><span class="font-bold">圓形披薩</span>
+                    </button>
+                    <button onclick="updateShape('choc')" id="shape-choc" class="flex flex-col items-center p-4 rounded-2xl border-4 border-transparent bg-gray-50 opacity-60 hover:opacity-100 transition">
+                        <span class="text-4xl mb-2">🍫</span><span class="font-bold">格狀巧克力</span>
+                    </button>
+                    <button onclick="updateShape('bread')" id="shape-bread" class="flex flex-col items-center p-4 rounded-2xl border-4 border-transparent bg-gray-50 opacity-60 hover:opacity-100 transition">
+                        <span class="text-4xl mb-2">🥖</span><span class="font-bold">長條麵包</span>
+                    </button>
+                </div>
+
+                <h2 class="text-2xl font-black text-amber-800 mb-6 flex items-center gap-2">
+                    <span class="bg-amber-100 p-2 rounded-xl">Step 2</span> 輸入數字
+                </h2>
+                <div class="fraction-ui py-8 bg-amber-50 rounded-3xl border-2 border-dashed border-amber-200 mb-8">
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-black text-amber-600 mb-2">分子 (取幾份)</span>
+                        <input type="number" id="exp-num" value="1" min="0" class="input-number" oninput="refreshExplore()">
+                    </div>
+                    <div class="fraction-divider"></div>
+                    <div class="flex flex-col items-center">
+                        <input type="number" id="exp-den" value="4" min="1" max="12" class="input-number" oninput="refreshExplore()">
+                        <span class="text-xs font-black text-gray-400 mt-2">分母 (總共分幾份)</span>
+                    </div>
+                </div>
+
+                <div id="explore-info" class="p-6 bg-white rounded-2xl border-2 border-amber-200">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">📢</span>
+                        <p class="text-xl font-black text-orange-600" id="read-aloud">四分之一</p>
+                    </div>
+                    <p class="text-gray-500 leading-relaxed" id="meaning-text">這代表將一個東西平均分成 4 份，拿走其中的 1 份。</p>
+                </div>
+            </div>
+
+            <!-- 右側：視覺化圖形 -->
+            <div class="bg-white p-10 rounded-[40px] shadow-2xl flex flex-col items-center justify-center min-h-[500px] border-b-[12px] border-amber-100">
+                <div id="viz-container" class="w-full h-80 flex items-center justify-center mb-8 drop-shadow-xl"></div>
+                <div id="viz-tag" class="px-10 py-4 rounded-full bg-amber-100 text-amber-700 font-black text-2xl shadow-inner">真分數</div>
+                <p id="exp-err" class="text-red-500 font-bold mt-4 h-6"></p>
+            </div>
+        </section>
+
+        <!-- 挑戰模式區塊 -->
+        <section id="section-challenge" class="hidden max-w-2xl mx-auto page-transition">
+            <!-- 進度儀表板 -->
+            <div class="bg-white p-6 rounded-3xl shadow-xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="font-black text-amber-800">挑戰進度</span>
+                    <div class="flex gap-2" id="progress-dots"></div>
+                </div>
+                <div class="bg-amber-500 text-white px-6 py-2 rounded-full font-black text-lg">
+                    積分：<span id="game-score">0</span>
+                </div>
+            </div>
+
+            <!-- 關卡內容 -->
+            <div id="game-card" class="bg-white p-12 rounded-[50px] shadow-2xl text-center border-b-[15px] border-amber-200">
+                <div class="mb-6 flex justify-center items-center gap-4">
+                    <span class="text-4xl">🎯</span>
+                    <h2 class="text-3xl font-black text-amber-800">第 <span id="current-lv">1</span> 關</h2>
+                </div>
+
+                <div id="game-viz" class="w-full h-72 bg-gray-50 rounded-3xl mb-12 flex items-center justify-center border-2 border-gray-100"></div>
+
+                <div class="fraction-ui mb-10">
+                    <input type="number" id="game-num" placeholder="?" class="input-number border-amber-400">
+                    <div class="fraction-divider"></div>
+                    <input type="number" id="game-den" placeholder="?" class="input-number border-amber-400">
+                </div>
+
+                <div id="game-actions" class="flex flex-col gap-4">
+                    <button onclick="submitAnswer()" id="btn-check" class="w-full py-6 bg-amber-500 text-white rounded-3xl font-black text-2xl shadow-lg hover:bg-amber-600 hover:-translate-y-1 transition active:translate-y-0">檢查答案</button>
+                    <button onclick="toNextLevel()" id="btn-next" class="hidden w-full py-6 bg-green-500 text-white rounded-3xl font-black text-2xl shadow-lg hover:bg-green-600 transition">答對了！進入下一關 ➔</button>
+                </div>
+                
+                <p id="game-msg" class="mt-8 text-2xl font-black h-12"></p>
+            </div>
+
+            <!-- 勝利結算畫面 -->
+            <div id="victory-card" class="hidden bg-white p-16 rounded-[60px] shadow-2xl text-center border-b-[20px] border-yellow-400">
+                <div class="text-9xl mb-8">👑</div>
+                <h2 class="text-5xl font-black text-amber-800 mb-6">通關成功！</h2>
+                <p class="text-2xl text-gray-500 mb-10 font-bold">你已經學會了分數的基本概念！</p>
+                
+                <div class="bg-yellow-50 rounded-3xl p-8 mb-10 border-4 border-dashed border-yellow-200">
+                    <p class="text-xl font-bold text-gray-600 mb-2">最終戰績</p>
+                    <p class="text-6xl font-black text-orange-600"><span id="final-pts">0</span> 點</p>
+                </div>
+
+                <button onclick="switchMode('challenge')" class="w-full py-6 bg-amber-500 text-white rounded-3xl font-black text-2xl shadow-lg hover:bg-amber-600 transition">重新挑戰 ↻</button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-amber-900 text-amber-200 py-10 text-center">
+        <div class="container mx-auto px-4">
+            <p class="font-black text-xl mb-2">小學三年級分數互動教室</p>
+            <p class="text-sm opacity-60">設計目的：讓學生透過視覺化圖形與數字輸入，理解分子、分母與平分的概念。</p>
+        </div>
+    </footer>
+
+    <script>
+        // 全域配置與狀態
+        const CONFIG = {
+            shapes: ['circle', 'choc', 'bread'],
+            zh: ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"],
+            maxLevel: 10
+        };
+
+        let state = {
+            currentShape: 'circle',
+            level: 1,
+            score: 0,
+            target: { n: 0, d: 0 }
+        };
+
+        // UI 初始化
+        function init() {
+            refreshExplore();
+            initDots();
+        }
+
+        // 核心功能：形狀切換
+        function updateShape(s) {
+            state.currentShape = s;
+            CONFIG.shapes.forEach(sh => {
+                const btn = document.getElementById(`shape-${sh}`);
+                if (sh === s) {
+                    btn.classList.add('border-amber-500', 'bg-amber-50', 'shadow-md');
+                    btn.classList.remove('border-transparent', 'bg-gray-50', 'opacity-60');
+                } else {
+                    btn.classList.remove('border-amber-500', 'bg-amber-50', 'shadow-md');
+                    btn.classList.add('border-transparent', 'bg-gray-50', 'opacity-60');
+                }
+            });
+            refreshExplore();
+        }
+
+        // 核心功能：模式切換
+        function switchMode(m) {
+            document.getElementById('section-explore').classList.toggle('hidden', m !== 'explore');
+            document.getElementById('section-challenge').classList.toggle('hidden', m !== 'challenge');
+            
+            const btnExp = document.getElementById('btn-nav-explore');
+            const btnCha = document.getElementById('btn-nav-challenge');
+
+            if (m === 'explore') {
+                btnExp.className = "nav-btn active";
+                btnCha.className = "nav-btn bg-white text-amber-600 ml-1";
+                refreshExplore();
+            } else {
+                btnCha.className = "nav-btn active";
+                btnExp.className = "nav-btn bg-white text-amber-600 mr-1";
+                startNewGame();
+            }
+        }
+
+        // 自由探索邏輯
+        function refreshExplore() {
+            const nInput = document.getElementById('exp-num');
+            const dInput = document.getElementById('exp-den');
+            const err = document.getElementById('exp-err');
+            
+            let n = parseInt(nInput.value) || 0;
+            let d = parseInt(dInput.value) || 1;
+
+            err.innerText = "";
+            if (d > 12) { d = 12; dInput.value = 12; err.innerText = "分母最大建議為 12 份。"; }
+            if (d < 1) { d = 1; dInput.value = 1; }
+            if (n > d) { n = d; nInput.value = d; err.innerText = "分子不應大於分母。"; }
+            if (n < 0) { n = 0; nInput.value = 0; }
+
+            // 更新文字描述
+            document.getElementById('read-aloud').innerText = `${CONFIG.zh[d] || d}分之${CONFIG.zh[n] || n}`;
+            document.getElementById('meaning-text').innerText = `這代表將一個東西平均分成 ${d} 份，拿走其中的 ${n} 份。`;
+            
+            const tag = document.getElementById('viz-tag');
+            if (n === d) { tag.innerText = "一整個"; tag.className = "px-10 py-4 rounded-full bg-blue-100 text-blue-700 font-black text-2xl shadow-inner"; }
+            else if (n === 0) { tag.innerText = "零"; tag.className = "px-10 py-4 rounded-full bg-gray-100 text-gray-500 font-black text-2xl shadow-inner"; }
+            else { tag.innerText = "真分數"; tag.className = "px-10 py-4 rounded-full bg-amber-100 text-amber-700 font-black text-2xl shadow-inner"; }
+
+            draw('viz-container', state.currentShape, d, n, 320);
+        }
+
+        // 闖關模式邏輯
+        function startNewGame() {
+            state.level = 1;
+            state.score = 0;
+            document.getElementById('game-score').innerText = "0";
+            document.getElementById('game-card').classList.remove('hidden');
+            document.getElementById('victory-card').classList.add('hidden');
+            initDots();
+            generateLevel();
+        }
+
+        function initDots() {
+            const container = document.getElementById('progress-dots');
+            container.innerHTML = '';
+            for (let i = 1; i <= CONFIG.maxLevel; i++) {
+                const dot = document.createElement('div');
+                dot.id = `dot-${i}`;
+                dot.className = 'progress-dot';
+                container.appendChild(dot);
+            }
+        }
+
+        function generateLevel() {
+            // 隨機題型：後五關難度稍增
+            const maxDen = state.level <= 5 ? 6 : 12;
+            const d = Math.floor(Math.random() * (maxDen - 1)) + 2;
+            const n = Math.floor(Math.random() * (d - 1)) + 1;
+            state.target = { n, d };
+
+            const randShape = CONFIG.shapes[Math.floor(Math.random() * 3)];
+            
+            document.getElementById('current-lv').innerText = state.level;
+            document.getElementById('game-num').value = "";
+            document.getElementById('game-den').value = "";
+            document.getElementById('game-msg').innerText = "";
+            document.getElementById('btn-check').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+
+            draw('game-viz', randShape, d, n, 250);
+
+            // 更新進度點
+            for (let i = 1; i <= 10; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i < state.level) dot.className = 'progress-dot done';
+                else if (i === state.level) dot.className = 'progress-dot current';
+                else dot.className = 'progress-dot';
+            }
+        }
+
+        function submitAnswer() {
+            const un = parseInt(document.getElementById('game-num').value);
+            const ud = parseInt(document.getElementById('game-den').value);
+            const msg = document.getElementById('game-msg');
+
+            if (un === state.target.n && ud === state.target.d) {
+                msg.innerText = "🏆 太棒了！答對囉！";
+                msg.className = "mt-8 text-2xl font-black text-green-500 page-transition";
+                state.score += 10;
+                document.getElementById('game-score').innerText = state.score;
+                document.getElementById('btn-check').classList.add('hidden');
+                document.getElementById('btn-next').classList.remove('hidden');
+            } else {
+                msg.innerText = "❌ 數數看，有平分成幾份呢？";
+                msg.className = "mt-8 text-2xl font-black text-red-500";
+            }
+        }
+
+        function toNextLevel() {
+            if (state.level >= CONFIG.maxLevel) {
+                document.getElementById('game-card').classList.add('hidden');
+                document.getElementById('victory-card').classList.remove('hidden');
+                document.getElementById('final-pts').innerText = state.score;
+                document.getElementById(`dot-10`).className = 'progress-dot done';
+            } else {
+                state.level++;
+                generateLevel();
+            }
+        }
+
+        // SVG 渲染引擎
+        function draw(id, shape, den, num, size) {
+            const box = document.getElementById(id);
+            box.innerHTML = '';
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("width", size);
+            svg.setAttribute("height", size);
+            svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+
+            if (shape === 'circle') {
+                const cx = size/2, cy = size/2, r = size * 0.45;
+                // 底盤
+                const circleBg = document.createElementNS(ns, "circle");
+                circleBg.setAttribute("cx", cx); circleBg.setAttribute("cy", cy); circleBg.setAttribute("r", r);
+                circleBg.setAttribute("fill", "#f3f4f6");
+                svg.appendChild(circleBg);
+
+                for (let i = 0; i < den; i++) {
+                    const start = (i * 360 / den) - 90;
+                    const end = ((i + 1) * 360 / den) - 90;
+                    const path = document.createElementNS(ns, "path");
+                    path.setAttribute("d", getArc(cx, cy, r, start, end));
+                    path.setAttribute("fill", i < num ? "#f59e0b" : "#ffffff");
+                    path.setAttribute("stroke", "#451a03");
+                    path.setAttribute("stroke-width", "2");
+                    path.classList.add('slice');
+                    svg.appendChild(path);
+                }
+            } else if (shape === 'choc') {
+                const cols = Math.ceil(Math.sqrt(den));
+                const rows = Math.ceil(den / cols);
+                const pad = 20;
+                const cw = (size - pad*2) / cols;
+                const ch = (size - pad*2) / rows;
+                for (let i = 0; i < den; i++) {
+                    const r = Math.floor(i / cols);
+                    const c = i % cols;
+                    const rect = document.createElementNS(ns, "rect");
+                    rect.setAttribute("x", pad + c*cw + 4);
+                    rect.setAttribute("y", pad + r*ch + 4);
+                    rect.setAttribute("width", cw - 8);
+                    rect.setAttribute("height", ch - 8);
+                    rect.setAttribute("rx", "12");
+                    rect.setAttribute("fill", i < num ? "#78350f" : "#fef3c7");
+                    rect.setAttribute("stroke", "#451a03");
+                    rect.setAttribute("stroke-width", "2");
+                    rect.classList.add('slice');
+                    svg.appendChild(rect);
+                }
+            } else {
+                const w = size * 0.9, h = size * 0.4;
+                const x0 = (size - w)/2, y0 = (size - h)/2;
+                const sw = w / den;
+                for (let i = 0; i < den; i++) {
+                    const rect = document.createElementNS(ns, "rect");
+                    rect.setAttribute("x", x0 + i*sw);
+                    rect.setAttribute("y", y0);
+                    rect.setAttribute("width", sw);
+                    rect.setAttribute("height", h);
+                    rect.setAttribute("fill", i < num ? "#fbbf24" : "#ffffff");
+                    rect.setAttribute("stroke", "#451a03");
+                    rect.setAttribute("stroke-width", "2");
+                    rect.classList.add('slice');
+                    svg.appendChild(rect);
+                }
+            }
+            box.appendChild(svg);
+        }
+
+        function getArc(cx, cy, r, s, e) {
+            const rad = Math.PI/180;
+            const x1 = cx + r * Math.cos(s * rad), y1 = cy + r * Math.sin(s * rad);
+            const x2 = cx + r * Math.cos(e * rad), y2 = cy + r * Math.sin(e * rad);
+            if (e - s >= 359.9) return `M ${cx} ${cy-r} A ${r} ${r} 0 1 1 ${cx-0.1} ${cy-r} Z`;
+            return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
