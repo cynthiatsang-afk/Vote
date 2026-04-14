@@ -3,22 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>同步問答 - 穩定加強版</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+    <title>同步問答系統 - 穩定版</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #dfe6ed; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #teacher-ui, #student-ui { display: none; height: 100%; width: 100%; flex-direction: column; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 1; padding: 5px; }
+        
+        /* 老師端佈局 */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 1; padding: 5px; overflow-y: auto; }
         .group-card { background: white; border-radius: 8px; border: 1px solid #ccc; display: flex; flex-direction: column; overflow: hidden; }
         .t-layout { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; background: #bbb; padding: 4px; flex: 1; }
-        .desk { background: white; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: #333; }
+        .desk { background: white; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: #333; height: 40px; }
+        
+        /* 顏色標記 */
         .v-a { background: #e74c3c !important; color: white !important; }
         .v-b { background: #3498db !important; color: white !important; }
         .v-c { background: #2ecc71 !important; color: white !important; }
+        
+        /* 統計欄 */
         .stat-bar { background: #2c3e50; display: flex; height: 70px; }
         .stat-box { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
         .stat-num { font-size: 26px; font-weight: 900; }
         .refresh-btn { background: #f1c40f; border: none; width: 80px; font-weight: bold; cursor: pointer; }
+        
+        /* 學生端佈局 */
         .status-header { text-align: center; padding: 12px; font-weight: bold; background: #f1c40f; color: #333; transition: 0.3s; }
         .btn { flex: 1; margin: 10px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: white; font-weight: bold; border: 6px solid transparent; opacity: 0.3; pointer-events: none; transition: 0.2s; }
         .btn.ready { opacity: 1; pointer-events: auto; }
@@ -28,7 +36,7 @@
 <body>
 
     <div id="teacher-ui">
-        <div id="room-info" style="background:#1a1a1a; color:#00d4ff; text-align:center; padding:5px; font-family:monospace;">啟動中...</div>
+        <div id="room-info" style="background:#1a1a1a; color:#00d4ff; text-align:center; padding:5px; font-family:monospace;">啟動伺服器中...</div>
         <div class="grid" id="grid-box"></div>
         <div class="stat-bar">
             <div class="stat-box v-a"><span>A</span><span id="count-a" class="stat-num">0</span></div>
@@ -39,16 +47,17 @@
     </div>
 
     <div id="student-ui">
-        <div id="status-tag" class="status-header">初始化中...</div>
+        <div id="status-tag" class="status-header">等待連線...</div>
         <button id="btn-a" class="btn v-a" onclick="studentVote('a')">A</button>
         <button id="btn-b" class="btn v-b" onclick="studentVote('b')">B</button>
         <button id="btn-c" class="btn v-c" onclick="studentVote('c')">C</button>
     </div>
 
     <script>
-        // --- 核心配置 ---
-        // 建議每天修改這個字串，或加上日期，避免 PeerID 衝突
-        const ROOM_PREFIX = 'CLASS_ROOM_2109_'; 
+        // --- 核心設定 ---
+        // 重要：請將此 ID 修改為獨一無二的值，例如加上你的英文名或日期
+        const FIXED_ROOM_ID = 'ROOM_SET_2024_01'; 
+        
         const PEER_CONFIG = {
             debug: 1,
             config: {
@@ -64,31 +73,29 @@
         let conn = null;
         let teacherConns = [];
         const urlParams = new URLSearchParams(window.location.search);
-        const roomID = urlParams.get('room') || ROOM_PREFIX;
         const seatID = urlParams.get('seat');
 
         window.onload = () => {
             if (seatID) {
-                startStudent(roomID, seatID);
+                startStudent(FIXED_ROOM_ID, seatID);
             } else {
-                startTeacher(roomID);
+                startTeacher(FIXED_ROOM_ID);
             }
         };
 
-        // --- 老師端邏輯 ---
+        // --- 老師邏輯 ---
         function startTeacher(id) {
             document.getElementById('teacher-ui').style.display = 'flex';
             peer = new Peer(id, PEER_CONFIG);
             
             peer.on('open', (id) => {
-                document.getElementById('room-info').innerText = "房號: " + id + " | 等待學生連線...";
+                document.getElementById('room-info').innerText = "✅ 房間就緒: " + id + " | 等待學生...";
                 renderGrid();
             });
 
             peer.on('connection', (c) => {
                 c.on('open', () => {
                     teacherConns.push(c);
-                    // 監聽學生傳來的數據
                     c.on('data', (data) => {
                         if (data.type === 'vote') {
                             const el = document.getElementById('d-' + data.seat);
@@ -103,20 +110,20 @@
             });
 
             peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') alert("房號已被佔用，請修改代碼中的 ROOM_PREFIX");
+                if (err.type === 'unavailable-id') {
+                    document.getElementById('room-info').innerText = "❌ ID 已被佔用，請更換代碼中的 FIXED_ROOM_ID";
+                }
             });
         }
 
         function renderGrid() {
             const box = document.getElementById('grid-box');
-            const groups = ["G5", "G3", "G1", "G6", "G4", "G2"];
+            const groups = ["G1", "G2", "G3", "G4", "G5", "G6"];
             box.innerHTML = "";
             groups.forEach(g => {
                 let desks = "";
-                [4,1,3,2].forEach(num => {
-                    desks += `<div class="desk" id="d-${g}-${num}">${g}-${num}</div>`;
-                });
-                box.innerHTML += `<div class="group-card"><div style="text-align:center;font-size:10px;color:#999">${g}</div><div class="t-layout">${desks}</div></div>`;
+                [1,2,3,4].forEach(n => desks += `<div class="desk" id="d-${g}-${n}">${g}-${n}</div>`);
+                box.innerHTML += `<div class="group-card"><div style="text-align:center;font-size:10px;padding:2px;color:#999">${g}</div><div class="t-layout">${desks}</div></div>`;
             });
         }
 
@@ -135,27 +142,24 @@
             teacherConns.forEach(c => { if (c.open) c.send({ type: 'reset' }); });
         }
 
-        // --- 學生端邏輯 (解決手機 Load 不入的核心) ---
+        // --- 學生邏輯 ---
         function startStudent(r, s) {
             document.getElementById('student-ui').style.display = 'flex';
             const tag = document.getElementById('status-tag');
             
-            // 如果已有 peer，先徹底銷毀
             if (peer) { peer.destroy(); peer = null; }
 
-            // 隨機延遲 500ms~4000ms，分散連線壓力
-            tag.innerText = "正在排隊連線...";
+            const delay = Math.random() * 3000 + 500;
+            tag.innerText = "連線佇列中...";
             tag.style.background = "#f1c40f";
 
             setTimeout(() => {
                 peer = new Peer(PEER_CONFIG);
-
                 peer.on('open', () => {
-                    tag.innerText = "正在進入房間：" + r;
                     conn = peer.connect(r, { reliable: true });
 
                     conn.on('open', () => {
-                        tag.innerText = "座位 " + s + "：已連線";
+                        tag.innerText = "座位 " + s + "：連線成功";
                         tag.style.background = "#2ecc71";
                         tag.style.color = "white";
                         document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
@@ -163,4 +167,31 @@
 
                     conn.on('data', (data) => {
                         if (data.type === 'reset') {
-                            document.querySelectorAll('.btn').forEach(b => b
+                            document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                        }
+                    });
+
+                    conn.on('close', () => {
+                        tag.innerText = "與老師中斷，重新連線中...";
+                        setTimeout(() => startStudent(r, s), 2000);
+                    });
+                });
+
+                peer.on('error', () => {
+                    tag.innerText = "找不到老師，請確認老師已啟動";
+                    setTimeout(() => startStudent(r, s), 4000);
+                });
+            }, delay);
+        }
+
+        function studentVote(ans) {
+            if (conn && conn.open) {
+                document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                document.getElementById('btn-' + ans).classList.add('selected');
+                conn.send({ type: 'vote', seat: seatID, ans: ans });
+                if (navigator.vibrate) navigator.vibrate(40);
+            }
+        }
+    </script>
+</body>
+</html>
