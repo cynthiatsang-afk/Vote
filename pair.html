@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直線對稱實驗室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        canvas {
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .active-mode {
+            border-color: #4f46e5;
+            background-color: #ffffff;
+            color: #4f46e5;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .color-dot.active {
+            ring: 2px;
+            ring-offset: 2px;
+            ring-color: #1e293b;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <div class="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col md:flex-row">
+        
+        <!-- 左側工具欄 -->
+        <div class="w-full md:w-80 bg-slate-50 p-8 border-r border-slate-200 space-y-8">
+            <div>
+                <div class="flex items-center gap-2 text-indigo-600 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                    <h2 class="text-2xl font-black">直線對稱</h2>
+                </div>
+                <p class="text-slate-500 text-xs">幾何圖形對稱實驗工具 (HTML版)</p>
+            </div>
+
+            <!-- 對稱模式選擇 -->
+            <div class="space-y-4">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">選擇對稱模式</label>
+                <div class="grid grid-cols-2 gap-2" id="mode-selector">
+                    <button onclick="setMode('vertical')" id="btn-vertical" class="mode-btn p-3 rounded-xl border-2 border-transparent bg-slate-200 text-slate-400 transition-all flex flex-col items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                        <span class="text-xs font-bold">垂直軸</span>
+                    </button>
+                    <button onclick="setMode('horizontal')" id="btn-horizontal" class="mode-btn p-3 rounded-xl border-2 border-transparent bg-slate-200 text-slate-400 transition-all flex flex-col items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+                        <span class="text-xs font-bold">水平軸</span>
+                    </button>
+                    <button onclick="setMode('cross')" id="btn-cross" class="mode-btn active-mode p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span class="text-xs font-bold">十字軸</span>
+                    </button>
+                    <button onclick="setMode('radial')" id="btn-radial" class="mode-btn p-3 rounded-xl border-2 border-transparent bg-slate-200 text-slate-400 transition-all flex flex-col items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                        <span class="text-xs font-bold">點對稱</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 顏色選擇 -->
+            <div class="space-y-4">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">畫筆顏色</label>
+                <div class="flex gap-2" id="color-selector">
+                    <button onclick="setColor('#4f46e5', this)" class="color-btn w-8 h-8 rounded-full border-2 border-slate-900 scale-110" style="background-color: #4f46e5;"></button>
+                    <button onclick="setColor('#ef4444', this)" class="color-btn w-8 h-8 rounded-full border-2 border-transparent" style="background-color: #ef4444;"></button>
+                    <button onclick="setColor('#10b981', this)" class="color-btn w-8 h-8 rounded-full border-2 border-transparent" style="background-color: #10b981;"></button>
+                    <button onclick="setColor('#f59e0b', this)" class="color-btn w-8 h-8 rounded-full border-2 border-transparent" style="background-color: #f59e0b;"></button>
+                    <button onclick="setColor('#000000', this)" class="color-btn w-8 h-8 rounded-full border-2 border-transparent" style="background-color: #000000;"></button>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-200 space-y-3">
+                <button onclick="clearCanvas()" class="w-full py-3 bg-white border border-slate-300 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 hover:text-red-600 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    清除畫布
+                </button>
+                <button onclick="downloadImage()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    導出圖片
+                </button>
+            </div>
+        </div>
+
+        <!-- 畫布區域 -->
+        <div class="flex-1 bg-slate-100 flex flex-col items-center justify-center p-6 min-h-[600px]">
+            
+            <div class="mb-6">
+                <div id="status-badge" class="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-sm border bg-white text-slate-400 border-slate-200">
+                    <svg id="status-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span id="status-text">請點擊畫布設定起點</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-1 rounded-2xl shadow-2xl border-[12px] border-white relative">
+                <canvas id="mainCanvas" width="500" height="500" class="block bg-white rounded-lg"></canvas>
+            </div>
+
+            <div class="mt-8 bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex gap-4 items-center max-w-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <p class="text-[11px] text-indigo-900 leading-relaxed font-medium">
+                    觀察重點：嘗試連線兩個不同區域的點，觀察垂直、水平對稱軸如何改變線段的傾斜方向。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+
+        const GRID_SIZE = 25;
+        const CANVAS_SIZE = 500;
+
+        let currentMode = 'cross';
+        let currentColor = '#4f46e5';
+        let lines = []; // 儲存已完成的線段組
+        let startPoint = null;
+        let previewPos = null;
+
+        // 初始化
+        function init() {
+            render();
+            
+            canvas.addEventListener('pointerdown', handlePointerDown);
+            canvas.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('resize', () => render());
+        }
+
+        const snap = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
+        function setMode(mode) {
+            currentMode = mode;
+            lines = [];
+            startPoint = null;
+            previewPos = null;
+            
+            // 更新 UI
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active-mode');
+                btn.classList.add('bg-slate-200', 'text-slate-400', 'border-transparent');
+            });
+            document.getElementById(`btn-${mode}`).classList.add('active-mode');
+            document.getElementById(`btn-${mode}`).classList.remove('bg-slate-200', 'text-slate-400', 'border-transparent');
+            
+            updateStatus();
+            render();
+        }
+
+        function setColor(color, el) {
+            currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.replace('border-slate-900', 'border-transparent');
+                btn.classList.remove('scale-110');
+            });
+            el.classList.replace('border-transparent', 'border-slate-900');
+            el.classList.add('scale-110');
+            render();
+        }
+
+        function clearCanvas() {
+            lines = [];
+            startPoint = null;
+            previewPos = null;
+            updateStatus();
+            render();
+        }
+
+        function updateStatus() {
+            if (startPoint) {
+                statusBadge.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500', 'scale-105');
+                statusBadge.classList.remove('bg-white', 'text-slate-400', 'border-slate-200');
+                statusText.innerText = "請點擊第二個點來連線";
+            } else {
+                statusBadge.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500', 'scale-105');
+                statusBadge.classList.add('bg-white', 'text-slate-400', 'border-slate-200');
+                statusText.innerText = "請點擊畫布設定起點";
+            }
+        }
+
+        function getSymmetricPairs(p1, p2) {
+            const w = CANVAS_SIZE;
+            const h = CANVAS_SIZE;
+            const pairs = [{ p1, p2 }];
+
+            if (currentMode === 'vertical' || currentMode === 'cross') {
+                pairs.push({
+                    p1: { x: w - p1.x, y: p1.y },
+                    p2: { x: w - p2.x, y: p2.y }
+                });
+            }
+            if (currentMode === 'horizontal' || currentMode === 'cross') {
+                pairs.push({
+                    p1: { x: p1.x, y: h - p1.y },
+                    p2: { x: p2.x, y: h - p2.y }
+                });
+            }
+            if (currentMode === 'cross') {
+                pairs.push({
+                    p1: { x: w - p1.x, y: h - p1.y },
+                    p2: { x: w - p2.x, y: h - p2.y }
+                });
+            }
+            if (currentMode === 'radial' && currentMode !== 'cross') {
+                pairs.push({
+                    p1: { x: w - p1.x, y: h - p1.y },
+                    p2: { x: w - p2.x, y: h - p2.y }
+                });
+            }
+            return pairs;
+        }
+
+        function handlePointerDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = snap(e.clientX - rect.left);
+            const y = snap(e.clientY - rect.top);
+
+            if (!startPoint) {
+                startPoint = { x, y };
+                previewPos = { x, y };
+            } else {
+                const finalLines = getSymmetricPairs(startPoint, { x, y });
+                lines.push(finalLines);
+                startPoint = null;
+                previewPos = null;
+            }
+            updateStatus();
+            render();
+        }
+
+        function handlePointerMove(e) {
+            if (!startPoint) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = snap(e.clientX - rect.left);
+            const y = snap(e.clientY - rect.top);
+            previewPos = { x, y };
+            render();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // 1. 網格
+            ctx.beginPath();
+            ctx.strokeStyle = '#f1f5f9';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= CANVAS_SIZE; i += GRID_SIZE) {
+                ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_SIZE);
+                ctx.moveTo(0, i); ctx.lineTo(CANVAS_SIZE, i);
+            }
+            ctx.stroke();
+
+            // 2. 對稱軸
+            ctx.beginPath();
+            ctx.setLineDash([8, 4]);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ef4444';
+            const mid = CANVAS_SIZE / 2;
+            if (currentMode === 'vertical' || currentMode === 'cross') {
+                ctx.moveTo(mid, 0); ctx.lineTo(mid, CANVAS_SIZE);
+            }
+            if (currentMode === 'horizontal' || currentMode === 'cross') {
+                ctx.moveTo(0, mid); ctx.lineTo(CANVAS_SIZE, mid);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 3. 已存線段
+            lines.forEach(group => {
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                group.forEach(line => {
+                    ctx.beginPath();
+                    ctx.moveTo(line.p1.x, line.p1.y);
+                    ctx.lineTo(line.p2.x, line.p2.y);
+                    ctx.stroke();
+                });
+            });
+
+            // 4. 預覽
+            if (startPoint && previewPos) {
+                const syms = getSymmetricPairs(startPoint, previewPos);
+                syms.forEach((line, index) => {
+                    ctx.beginPath();
+                    if (index === 0) {
+                        ctx.strokeStyle = currentColor;
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([]);
+                    } else {
+                        ctx.strokeStyle = '#cbd5e1';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                    }
+                    ctx.moveTo(line.p1.x, line.p1.y);
+                    ctx.lineTo(line.p2.x, line.p2.y);
+                    ctx.stroke();
+                });
+                ctx.setLineDash([]);
+
+                // 起點點點
+                ctx.fillStyle = currentColor;
+                ctx.beginPath();
+                ctx.arc(startPoint.x, startPoint.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'symmetry-geometric.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
