@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>互動釘點板 - 拉動模式</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; text-align: center; background-color: #fff5e6; margin: 0; padding: 20px; touch-action: none; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #d35400; }
+        #target-box { font-size: 22px; background: #fef9e7; padding: 10px; border: 2px dashed #f39c12; border-radius: 10px; margin-bottom: 15px; }
+        
+        /* 釘板 */
+        #geoboard {
+            width: 320px; height: 320px; background-color: #ff8c42;
+            margin: 20px auto; position: relative; border-radius: 15px;
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr);
+        }
+        .dot {
+            width: 16px; height: 16px; background-color: white; border-radius: 50%;
+            margin: auto; position: relative; z-index: 10; pointer-events: all;
+        }
+        .dot.active { background-color: #2ecc71; transform: scale(1.3); }
+
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
+        
+        .controls { margin-top: 20px; }
+        button { padding: 12px 24px; font-size: 18px; cursor: pointer; border: none; border-radius: 50px; color: white; transition: 0.3s; }
+        #check-btn { background-color: #27ae60; }
+        #reset-btn { background-color: #e74c3c; margin-left: 10px; }
+        button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>幾何釘板：拉拉橡皮圈</h2>
+    <div id="target-box">請圍出一個：<strong id="target-name">三角形</strong></div>
+    
+    <div id="geoboard">
+        <canvas id="lineCanvas"></canvas>
+        <div class="dot" data-id="0"></div><div class="dot" data-id="1"></div><div class="dot" data-id="2"></div><div class="dot" data-id="3"></div>
+        <div class="dot" data-id="4"></div><div class="dot" data-id="5"></div><div class="dot" data-id="6"></div><div class="dot" data-id="7"></div>
+        <div class="dot" data-id="8"></div><div class="dot" data-id="9"></div><div class="dot" data-id="10"></div><div class="dot" data-id="11"></div>
+        <div class="dot" data-id="12"></div><div class="dot" data-id="13"></div><div class="dot" data-id="14"></div><div class="dot" data-id="15"></div>
+    </div>
+
+    <div class="controls">
+        <button id="check-btn" onclick="checkAnswer()">檢查答案</button>
+        <button id="reset-btn" onclick="resetBoard()">清除</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('lineCanvas');
+    const ctx = canvas.getContext('2d');
+    const dots = document.querySelectorAll('.dot');
+    const board = document.getElementById('geoboard');
+    
+    let levels = [
+        { name: "三角形", edges: 3 },
+        { name: "四邊形", edges: 4 },
+        { name: "五邊形", edges: 5 },
+        { name: "六邊形", edges: 6 }
+    ];
+    let currentLevel = 0;
+    let selectedPoints = [];
+    let isDragging = false;
+    let tempEndPoint = null;
+
+    // 初始化畫布大小
+    function initCanvas() {
+        canvas.width = board.clientWidth;
+        canvas.height = board.clientHeight;
+    }
+    window.onload = initCanvas;
+
+    // 獲取釘點坐標
+    function getDotPos(el) {
+        const rect = el.getBoundingClientRect();
+        const boardRect = board.getBoundingClientRect();
+        return {
+            x: rect.left - boardRect.left + rect.width / 2,
+            y: rect.top - boardRect.top + rect.height / 2,
+            id: el.getAttribute('data-id')
+        };
+    }
+
+    // 事件監聽（兼容滑鼠與觸控）
+    board.addEventListener('mousedown', startDrag);
+    board.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e.touches[0]); });
+
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('touchmove', (e) => { drag(e.touches[0]); });
+
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+
+    function startDrag(e) {
+        const dot = e.target.closest('.dot');
+        if (dot) {
+            const pos = getDotPos(dot);
+            // 如果是第一個點，或者點擊的是剛才選中的最後一個點，才允許拉線
+            if (selectedPoints.length === 0 || selectedPoints[selectedPoints.length-1].id === pos.id) {
+                isDragging = true;
+                if (selectedPoints.length === 0) {
+                    selectedPoints.push(pos);
+                    dot.classList.add('active');
+                }
+            }
+        }
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        const boardRect = board.getBoundingClientRect();
+        tempEndPoint = {
+            x: e.clientX - boardRect.left,
+            y: e.clientY - boardRect.top
+        };
+        draw();
+    }
+
+    function endDrag(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // 檢查釋放位置是否在某個釘點上
+        const releaseEl = document.elementFromPoint(
+            e.clientX || (e.changedTouches && e.changedTouches[0].clientX),
+            e.clientY || (e.changedTouches && e.changedTouches[0].clientY)
+        );
+
+        const dot = releaseEl ? releaseEl.closest('.dot') : null;
+        
+        if (dot) {
+            const pos = getDotPos(dot);
+            // 檢查是否已經連過這個點（一年級教學通常不重疊點）
+            if (!selectedPoints.find(p => p.id === pos.id)) {
+                selectedPoints.push(pos);
+                dot.classList.add('active');
+            }
+        }
+        tempEndPoint = null;
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (selectedPoints.length === 0) return;
+
+        ctx.beginPath();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 6;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        // 畫已確定的線
+        ctx.moveTo(selectedPoints[0].x, selectedPoints[0].y);
+        for (let i = 1; i < selectedPoints.length; i++) {
+            ctx.lineTo(selectedPoints[i].x, selectedPoints[i].y);
+        }
+
+        // 畫拉動中的預覽線
+        if (isDragging && tempEndPoint) {
+            ctx.lineTo(tempEndPoint.x, tempEndPoint.y);
+        } else if (selectedPoints.length >= 3) {
+            // 自動閉合顯示
+            ctx.closePath();
+        }
+        ctx.stroke();
+    }
+
+    function checkAnswer() {
+        const target = levels[currentLevel];
+        if (selectedPoints.length === target.edges) {
+            alert("太聰明了！你成功圍出了 " + target.name + "！");
+            currentLevel = (currentLevel + 1) % levels.length;
+            document.getElementById('target-name').innerText = levels[currentLevel].name;
+            resetBoard();
+        } else {
+            alert("這好像是 " + selectedPoints.length + " 個點點連起來的，再試試看圍出 " + target.name + " 吧！");
+        }
+    }
+
+    function resetBoard() {
+        selectedPoints = [];
+        tempEndPoint = null;
+        dots.forEach(d => d.classList.remove('active'));
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+</script>
+
+</body>
+</html>
