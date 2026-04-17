@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小一數學挑戰分級版</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #E8F5E9; /* 淺綠色背景 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #game-container {
+            background-color: #FFFFFF;
+            border-radius: 30px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 550px;
+            width: 95%;
+            text-align: center;
+            border: 6px solid #4CAF50;
+        }
+
+        .level-header {
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .lv1-color { background-color: #2196F3; } /* Level 1 藍色 */
+        .lv2-color { background-color: #FF9800; } /* Level 2 橙色 */
+
+        h1 { color: #2E7D32; font-size: 1.8rem; margin: 10px 0; }
+
+        .question-box {
+            font-size: 3rem;
+            margin: 15px 0;
+            background: #FFFDE7;
+            padding: 25px;
+            border-radius: 25px;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 4px dashed #FFEB3B;
+        }
+
+        .visual-aid {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            letter-spacing: 6px;
+            min-height: 2rem;
+            color: #555;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-btn {
+            background-color: #FFCDD2;
+            color: #B71C1C;
+            border: none;
+            padding: 15px;
+            font-size: 2.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px #EF9A9A;
+            transition: 0.1s;
+        }
+
+        .option-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px #EF9A9A;
+        }
+
+        #feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 40px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+            z-index: 100;
+            display: none;
+            text-align: center;
+            border: 10px solid #FFEB3B;
+        }
+
+        #animal-emoji { font-size: 8rem; display: block; }
+        #praise-text { font-size: 2.5rem; color: #E91E63; font-weight: bold; margin-top: 10px; }
+
+        .hidden { display: none; }
+        
+        .start-btn {
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            margin: 15px;
+            cursor: pointer;
+            border-radius: 20px;
+            border: none;
+            color: white;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>🎒 快樂數學練習 🎒</h1>
+            <p>請選擇挑戰等級：</p>
+            <button class="start-btn lv1-color" onclick="startGame(1)">
+                Level 1<br><small>(10以內加減法)</small>
+            </button>
+            <button class="start-btn lv2-color" onclick="startGame(2)">
+                Level 2<br><small>(9以內加數，答案到18)</small>
+            </button>
+        </div>
+
+        <div id="quiz-area" class="hidden">
+            <div id="lv-badge" class="level-header">LEVEL</div>
+            <div style="font-size: 1.2rem; margin: 10px;">進度：<span id="q-num">1</span> / 20</div>
+            
+            <div class="question-box">
+                <div class="visual-aid" id="visuals"></div>
+                <div id="question-text">載入中...</div>
+            </div>
+
+            <div class="options-grid" id="options"></div>
+        </div>
+
+        <div id="result-screen" class="hidden">
+            <h2>🎉 挑戰完成！</h2>
+            <p style="font-size: 2rem;">你的得分：<span id="final-score">0</span> / 20</p>
+            <button class="start-btn lv1-color" onclick="location.reload()">再玩一次</button>
+        </div>
+    </div>
+
+    <div id="feedback">
+        <span id="animal-emoji">🦁</span>
+        <div id="praise-text">好棒喔！</div>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let qCount = 1;
+        let score = 0;
+        let ans = 0;
+        
+        const animals = ['🐱', '🐼', '🐰', '🦁', '🐨', '🐷', '🐯', '🦒', '🦄', '🐶', '🐘', '🐧'];
+        const praises = ['好聰明！', '答對了！', '太厲害了！', '你真棒！', '加油加油！'];
+        const icons = ['🍎', '🍓', '🍊', '⭐', '🎈', '🍪', '🍄', '🍦', '💎'];
+
+        function startGame(lv) {
+            currentLevel = lv;
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-area').classList.remove('hidden');
+            const badge = document.getElementById('lv-badge');
+            badge.innerText = "LEVEL " + lv;
+            badge.className = "level-header " + (lv === 1 ? "lv1-color" : "lv2-color");
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (qCount > 20) {
+                document.getElementById('quiz-area').classList.add('hidden');
+                document.getElementById('result-screen').classList.remove('hidden');
+                document.getElementById('final-score').innerText = score;
+                return;
+            }
+
+            document.getElementById('q-num').innerText = qCount;
+            let n1, n2, symbol;
+            let isAdd = Math.random() > 0.5;
+            let currentIcon = icons[Math.floor(Math.random() * icons.length)];
+
+            if (currentLevel === 1) {
+                // LEVEL 1: 答案不超過 10
+                if (isAdd) {
+                    ans = Math.floor(Math.random() * 11); // 0-10
+                    n1 = Math.floor(Math.random() * (ans + 1));
+                    n2 = ans - n1;
+                    symbol = "+";
+                } else {
+                    n1 = Math.floor(Math.random() * 11); // 0-10
+                    n2 = Math.floor(Math.random() * (n1 + 1));
+                    ans = n1 - n2;
+                    symbol = "-";
+                }
+            } else {
+                // LEVEL 2: 被加數/加數不多於 9 (答案最大可達 18)
+                if (isAdd) {
+                    n1 = Math.floor(Math.random() * 10); // 0-9
+                    n2 = Math.floor(Math.random() * 10); // 0-9
+                    ans = n1 + n2;
+                    symbol = "+";
+                } else {
+                    n1 = Math.floor(Math.random() * 10); // 0-9
+                    n2 = Math.floor(Math.random() * (n1 + 1));
+                    ans = n1 - n2;
+                    symbol = "-";
+                }
+            }
+
+            // 顯示文字與圖像
+            document.getElementById('question-text').innerText = `${n1} ${symbol} ${n2} = ?`;
+            let vStr = "";
+            for(let i=0; i<n1; i++) vStr += currentIcon;
+            vStr += ` ${symbol} `;
+            for(let i=0; i<n2; i++) vStr += currentIcon;
+            document.getElementById('visuals').innerText = vStr || "0";
+
+            // 生成選項
+            const opts = new Set([ans]);
+            while(opts.size < 4) {
+                let w = ans + (Math.floor(Math.random() * 5) - 2);
+                if(w >= 0 && w <= 18) opts.add(w);
+            }
+            
+            const grid = document.getElementById('options');
+            grid.innerHTML = '';
+            Array.from(opts).sort(() => Math.random() - 0.5).forEach(v => {
+                const b = document.createElement('button');
+                b.className = 'option-btn';
+                b.innerText = v;
+                b.onclick = () => {
+                    if(v === ans) {
+                        score++;
+                        showWin();
+                    } else {
+                        alert("算錯了喔，再試一次！");
+                    }
+                };
+                grid.appendChild(b);
+            });
+        }
+
+        function showWin() {
+            const fb = document.getElementById('feedback');
+            document.getElementById('animal-emoji').innerText = animals[Math.floor(Math.random() * animals.length)];
+            document.getElementById('praise-text').innerText = praises[Math.floor(Math.random() * praises.length)];
+            fb.style.display = 'block';
+            setTimeout(() => {
+                fb.style.display = 'none';
+                qCount++;
+                nextQuestion();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
