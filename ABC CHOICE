@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>全班問答系統 (A/B/C)</title>
+    <style>
+        /* 1. 極致緊湊：確保手機一畫面看清 6 組，禁止捲動 */
+        body { font-family: sans-serif; background: #dfe6ed; margin: 0; padding: 3px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+        
+        h4 { margin: 3px; font-size: 15px; color: #333; text-align: center; }
+
+        /* 2. 3x2 全班網格 */
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(2, 1fr); 
+            gap: 5px; 
+            flex: 1; 
+            padding: 3px;
+        }
+
+        .group-card { background: white; border-radius: 8px; padding: 3px; display: flex; flex-direction: column; border: 1px solid #ccc; }
+        .group-name { font-weight: bold; font-size: 13px; text-align: center; color: #333; margin-bottom: 2px; background: #f0f0f0; padding: 1px 0;}
+
+        /* 3. T形併桌核心：上排寬(扁)，下排長(直) */
+        .t-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 1fr 1.6fr; 
+            gap: 3px; 
+            background: #bbb; 
+            padding: 3px; 
+            border-radius: 5px; 
+            flex: 1;
+        }
+
+        .desk { background: white; border-radius: 3px; display: flex; justify-content: space-evenly; align-items: center; border: 1px solid #ddd;}
+        
+        /* 4. 圓形按鈕：直徑 28px，包含 A/B/C 文字 */
+        .circle { 
+            width: 28px; 
+            height: 28px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            font-weight: bold;
+            font-size: 16px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.1s;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        /* 三色定義 */
+        .btn-a { background: #e74c3c; } /* 紅 A */
+        .btn-b { background: #3498db; } /* 藍 B */
+        .btn-c { background: #2ecc71; } /* 綠 C */
+
+        /* 選中視覺反饋 */
+        .v-a .btn-a { transform: scale(1.15); border-color: #c0392b; box-shadow: 0 0 6px #e74c3c; }
+        .v-a .btn-b, .v-a .btn-c { opacity: 0.05; }
+
+        .v-b .btn-b { transform: scale(1.15); border-color: #2980b9; box-shadow: 0 0 6px #3498db; }
+        .v-b .btn-a, .v-b .btn-c { opacity: 0.05; }
+
+        .v-c .btn-c { transform: scale(1.15); border-color: #27ae60; box-shadow: 0 0 6px #2ecc71; }
+        .v-c .btn-a, .v-c .btn-b { opacity: 0.05; }
+
+        /* 5. 底部統計條 */
+        .footer { background: #333; color: white; padding: 8px; display: flex; justify-content: space-around; align-items: center; font-size: 14px; border-radius: 10px; margin-top: 4px; }
+        .stat-val { font-weight: bold; font-size: 16px; }
+        .reset-btn { background: white; border: none; padding: 4px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <h4>全班答題系統 (3按鈕版)</h4>
+
+    <div class="grid-container">
+        <script>
+            // 順序：第一排 5,3,1；第二排 6,4,2
+            const order = ["G5", "G3", "G1", "G6", "G4", "G2"];
+            const grid = document.querySelector('.grid-container');
+            
+            order.forEach(g => {
+                document.write(`
+                    <div class="group-card">
+                        <div class="group-name">${g}組</div>
+                        <div class="t-layout">
+                            <div class="desk" id="d-${g}-1"><div class="circle btn-a" onclick="v('${g}-1','a')">A</div><div class="circle btn-b" onclick="v('${g}-1','b')">B</div><div class="circle btn-c" onclick="v('${g}-1','c')">C</div></div>
+                            <div class="desk" id="d-${g}-2"><div class="circle btn-a" onclick="v('${g}-2','a')">A</div><div class="circle btn-b" onclick="v('${g}-2','b')">B</div><div class="circle btn-c" onclick="v('${g}-2','c')">C</div></div>
+                            <div class="desk" id="d-${g}-3"><div class="circle btn-a" onclick="v('${g}-3','a')">A</div><div class="circle btn-b" onclick="v('${g}-3','b')">B</div><div class="circle btn-c" onclick="v('${g}-3','c')">C</div></div>
+                            <div class="desk" id="d-${g}-4"><div class="circle btn-a" onclick="v('${g}-4','a')">A</div><div class="circle btn-b" onclick="v('${g}-4','b')">B</div><div class="circle btn-c" onclick="v('${g}-4','c')">C</div></div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            function v(deskId, type) {
+                const desk = document.getElementById('d-' + deskId);
+                const isA = desk.classList.contains('v-a');
+                const isB = desk.classList.contains('v-b');
+                const isC = desk.classList.contains('v-c');
+
+                desk.classList.remove('v-a', 'v-b', 'v-c');
+
+                if (type === 'a' && !isA) { desk.classList.add('v-a'); }
+                else if (type === 'b' && !isB) { desk.classList.add('v-b'); }
+                else if (type === 'c' && !isC) { desk.classList.add('v-c'); }
+                
+                updateStats();
+            }
+
+            function updateStats() {
+                document.getElementById('c-a').innerText = document.querySelectorAll('.v-a').length;
+                document.getElementById('c-b').innerText = document.querySelectorAll('.v-b').length;
+                document.getElementById('c-c').innerText = document.querySelectorAll('.v-c').length;
+            }
+
+            function resetAll() {
+                document.querySelectorAll('.desk').forEach(desk => desk.classList.remove('v-a', 'v-b', 'v-c'));
+                updateStats();
+            }
+        </script>
+    </div>
+
+    <div class="footer">
+        <span>A: <b id="c-a" class="stat-val" style="color: #ff8a80;">0</b></span>
+        <span>B: <b id="c-b" class="stat-val" style="color: #80d8ff;">0</b></span>
+        <span>C: <b id="c-c" class="stat-val" style="color: #69f0ae;">0</b></span>
+        <button class="reset-btn" onclick="resetAll()">清空重置</button>
+    </div>
+
+</body>
+</html>
