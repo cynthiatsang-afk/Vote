@@ -109,7 +109,6 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- 網站頂部導航 -->
     <header class="bg-amber-500 text-white shadow-xl sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3 cursor-pointer" onclick="switchMode('explore')">
@@ -123,12 +122,9 @@
         </div>
     </header>
 
-    <!-- 主要內容區 -->
     <main class="flex-grow container mx-auto px-4 py-10">
         
-        <!-- 探索模式區塊 -->
         <section id="section-explore" class="page-transition grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <!-- 左側：控制面板 -->
             <div class="bg-white p-8 rounded-[40px] shadow-2xl border-b-[12px] border-amber-100">
                 <h2 class="text-2xl font-black text-amber-800 mb-6 flex items-center gap-2">
                     <span class="bg-amber-100 p-2 rounded-xl">Step 1</span> 挑選形狀
@@ -169,7 +165,6 @@
                 </div>
             </div>
 
-            <!-- 右側：視覺化圖形 -->
             <div class="bg-white p-10 rounded-[40px] shadow-2xl flex flex-col items-center justify-center min-h-[500px] border-b-[12px] border-amber-100">
                 <div id="viz-container" class="w-full h-80 flex items-center justify-center mb-8 drop-shadow-xl"></div>
                 <div id="viz-tag" class="px-10 py-4 rounded-full bg-amber-100 text-amber-700 font-black text-2xl shadow-inner">真分數</div>
@@ -177,9 +172,7 @@
             </div>
         </section>
 
-        <!-- 挑戰模式區塊 -->
         <section id="section-challenge" class="hidden max-w-2xl mx-auto page-transition">
-            <!-- 進度儀表板 -->
             <div class="bg-white p-6 rounded-3xl shadow-xl mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <span class="font-black text-amber-800">挑戰進度</span>
@@ -190,7 +183,6 @@
                 </div>
             </div>
 
-            <!-- 關卡內容 -->
             <div id="game-card" class="bg-white p-12 rounded-[50px] shadow-2xl text-center border-b-[15px] border-amber-200">
                 <div class="mb-6 flex justify-center items-center gap-4">
                     <span class="text-4xl">🎯</span>
@@ -213,7 +205,6 @@
                 <p id="game-msg" class="mt-8 text-2xl font-black h-12"></p>
             </div>
 
-            <!-- 勝利結算畫面 -->
             <div id="victory-card" class="hidden bg-white p-16 rounded-[60px] shadow-2xl text-center border-b-[20px] border-yellow-400">
                 <div class="text-9xl mb-8">👑</div>
                 <h2 class="text-5xl font-black text-amber-800 mb-6">通關成功！</h2>
@@ -429,26 +420,59 @@
                     svg.appendChild(path);
                 }
             } else if (shape === 'choc') {
+                // *** 修改後的巧克力模式：顯示為一整塊 ***
                 const cols = Math.ceil(Math.sqrt(den));
                 const rows = Math.ceil(den / cols);
-                const pad = 20;
-                const cw = (size - pad*2) / cols;
-                const ch = (size - pad*2) / rows;
+                const pad = 20; // 邊距
+                const totalW = size - pad * 2;
+                const totalH = size - pad * 2;
+                const cw = totalW / cols; // 單個格子寬度
+                const ch = totalH / rows; // 單個格子高度
+
+                // 1. 先畫一個底層大矩形（整塊朱古力的外觀，包含圓角）
+                const fullBar = document.createElementNS(ns, "rect");
+                fullBar.setAttribute("x", pad);
+                fullBar.setAttribute("y", pad);
+                fullBar.setAttribute("width", totalW);
+                fullBar.setAttribute("height", totalH);
+                fullBar.setAttribute("rx", "16"); // 朱古力磚的圓角
+                fullBar.setAttribute("fill", "#fef3c7"); // 未塗色的底色（淡色）
+                fullBar.setAttribute("stroke", "#451a03"); // 外框顏色
+                fullBar.setAttribute("stroke-width", "4"); // 外框粗細
+                svg.appendChild(fullBar);
+
+                // 2. 建立一個遮罩（ClipPath），確保裡面的格子不會超出大矩形的圓角
+                const clip = document.createElementNS(ns, "clipPath");
+                clip.setAttribute("id", "choc-clip");
+                const clipRect = fullBar.cloneNode();
+                clip.appendChild(clipRect);
+                const defs = document.createElementNS(ns, "defs");
+                defs.appendChild(clip);
+                svg.appendChild(defs);
+
+                // 建立一個群組並應用遮罩
+                const chocGroup = document.createElementNS(ns, "g");
+                chocGroup.setAttribute("clip-path", "url(#choc-clip)");
+                svg.appendChild(chocGroup);
+
+                // 3. 在群組裡面畫每一個格子（不需要圓角，因為被遮罩擋住了）
                 for (let i = 0; i < den; i++) {
                     const r = Math.floor(i / cols);
                     const c = i % cols;
                     const rect = document.createElementNS(ns, "rect");
-                    rect.setAttribute("x", pad + c*cw + 4);
-                    rect.setAttribute("y", pad + r*ch + 4);
-                    rect.setAttribute("width", cw - 8);
-                    rect.setAttribute("height", ch - 8);
-                    rect.setAttribute("rx", "12");
-                    rect.setAttribute("fill", i < num ? "#78350f" : "#fef3c7");
-                    rect.setAttribute("stroke", "#451a03");
-                    rect.setAttribute("stroke-width", "2");
+                    // 格子緊密相連，沒有間隙
+                    rect.setAttribute("x", pad + c * cw);
+                    rect.setAttribute("y", pad + r * ch);
+                    rect.setAttribute("width", cw);
+                    rect.setAttribute("height", ch);
+                    // 根據是否被選中填充不同深淺的朱古力色
+                    rect.setAttribute("fill", i < num ? "#78350f" : "#fef3c7"); 
+                    rect.setAttribute("stroke", "#451a03"); // 分隔線顏色
+                    rect.setAttribute("stroke-width", "1"); // 分隔線粗細
                     rect.classList.add('slice');
-                    svg.appendChild(rect);
+                    chocGroup.appendChild(rect);
                 }
+
             } else {
                 const w = size * 0.9, h = size * 0.4;
                 const x0 = (size - w)/2, y0 = (size - h)/2;
