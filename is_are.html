@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f9ff; margin: 0; padding: 10px; text-align: center; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 360px; margin: 10px auto; min-height: 350px; }
+        .q-text { font-size: 1.5rem; margin: 20px 0; color: #1e293b; min-height: 90px; display: flex; align-items: center; justify-content: center; border: 2px solid #e2e8f0; border-radius: 15px; padding: 15px; line-height: 1.6; }
+        .highlight { color: #0284c7; font-weight: bold; text-decoration: underline; }
+        .btn-group { display: flex; justify-content: space-around; gap: 10px; }
+        .btn-group button { flex: 1; padding: 20px 0; font-size: 1.4rem; cursor: pointer; border: 3px solid #0284c7; background: white; color: #0284c7; border-radius: 15px; font-weight: bold; }
+        #start-btn { padding: 20px 40px; font-size: 1.5rem; background: #0284c7; color: white; border: none; border-radius: 15px; font-weight: bold; margin-top: 50px; }
+        #next-btn { margin-top: 20px; padding: 15px; background: #16a34a; color: white; border: none; border-radius: 15px; display: none; width: 100%; font-size: 1.3rem; font-weight: bold; }
+        #feedback { margin-top: 15px; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="color: #0284c7;">Is or Are 挑戰賽 🏆</h2>
+    
+    <div id="start-screen">
+        <p>點擊按鈕開始練習</p>
+        <button id="start-btn" onclick="
+            document.getElementById('start-screen').style.display='none';
+            document.getElementById('quiz-content').style.display='block';
+            showQuestion();
+        ">開始遊戲</button>
+    </div>
+
+    <div id="quiz-content" style="display:none;">
+        <div id="progress" style="color: #64748b; font-weight: bold;">題目 1 / 15</div>
+        <div id="q-text" class="q-text">題目載入中...</div>
+        <div class="btn-group">
+            <button id="btn-is" onclick="checkAnswer('is')">is</button>
+            <button id="btn-are" onclick="checkAnswer('are')">are</button>
+        </div>
+        <div id="feedback"></div>
+        <button id="next-btn" onclick="nextStep()">下一題 ➔</button>
+    </div>
+</div>
+
+<script>
+    var data = [
+        { q: "The cat ___ sleeping.", a: "is" },
+        { q: "The apples ___ red.", a: "are" },
+        { q: "He ___ a tall boy.", a: "is" },
+        { q: "They ___ my friends.", a: "are" },
+        { q: "My mother ___ cooking.", a: "is" },
+        { q: "The birds ___ flying.", a: "are" },
+        { q: "It ___ a sunny day.", a: "is" },
+        { q: "The books ___ on the table.", a: "are" },
+        { q: "Sarah ___ playing piano.", a: "is" },
+        { q: "We ___ happy today.", a: "are" },
+        { q: "The dog ___ barking.", a: "is" },
+        { q: "These toys ___ old.", a: "are" },
+        { q: "There ___ a star.", a: "is" },
+        { q: "My sisters ___ dancing.", a: "are" },
+        { q: "The bus ___ yellow.", a: "is" }
+    ];
+    var idx = 0;
+
+    function showQuestion() {
+        var item = data[idx];
+        // 確保題目顯示，並在 ___ 處加上底線
+        document.getElementById('q-text').innerHTML = item.q.replace('___', '<span id="blank">______</span>');
+        document.getElementById('progress').innerText = "題目 " + (idx + 1) + " / 15";
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('next-btn').style.display = "none";
+        document.getElementById('btn-is').disabled = false;
+        document.getElementById('btn-are').disabled = false;
+    }
+
+    function checkAnswer(choice) {
+        var correct = data[idx].a;
+        if (choice === correct) {
+            // 答對時填入答案，並加上強制空格 &nbsp;
+            document.getElementById('q-text').innerHTML = data[idx].q.replace('___', '&nbsp;<span class="highlight">' + choice + '</span>&nbsp;');
+            document.getElementById('btn-is').disabled = true;
+            document.getElementById('btn-are').disabled = true;
+            document.getElementById('feedback').innerText = "✅ 答對了！好棒！🌟";
+            document.getElementById('feedback').style.color = "#16a34a";
+            
+            // 語音朗讀
+            var speech = new SpeechSynthesisUtterance(data[idx].q.replace('___', choice));
+            speech.lang = 'en-US';
+            window.speechSynthesis.speak(speech);
+            
+            document.getElementById('next-btn').style.display = "block";
+        } else {
+            document.getElementById('feedback').innerText = "❌ 差一點點，再試試！";
+            document.getElementById('feedback').style.color = "#dc2626";
+        }
+    }
+
+    function nextStep() {
+        idx++;
+        if (idx < data.length) {
+            showQuestion();
+        } else {
+            document.getElementById('quiz-content').innerHTML = "<h3>🎉 恭喜！你完成了所有練習！</h3><button onclick='location.reload()' style='padding:15px; background:#0284c7; color:white; border:none; border-radius:10px;'>再玩一次</button>";
+        }
+    }
+</script>
+
+</body>
+</html>
