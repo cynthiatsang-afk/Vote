@@ -12,7 +12,7 @@
         .praise-msg { height: 35px; font-size: 20px; font-weight: bold; margin: 15px 0; }
         img { width: 100%; border-radius: 10px; border: 1px solid #ddd; margin: 10px 0; }
         
-        /* 讓按鈕由上而下排列 */
+        /* 確保按鈕由上而下垂直排列 */
         .options { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         
         button { 
@@ -28,6 +28,7 @@
         }
         button:hover { background-color: #2980b9; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
         
         .hidden { display: none; }
         #final-screen { padding: 20px; }
@@ -43,7 +44,7 @@
         <h3>1. 哪幅圖的數據持續上升？</h3>
         <img src="image_2bf095.jpg">
         <div class="options">
-            <button onclick="check(1, 'A')">A</button>
+            <button onclick="check(1, 'A')">A. 持續上升</button>
             <button onclick="check(1, 'B')">B</button>
             <button onclick="check(1, 'C')">C</button>
         </div>
@@ -54,18 +55,19 @@
         <img src="image_2bf341.jpg">
         <div class="options">
             <button onclick="check(2, 'A')">A</button>
-            <button onclick="check(2, 'B')">B</button>
+            <button onclick="check(2, 'B')">B. 持續下降</button>
             <button onclick="check(2, 'C')">C</button>
         </div>
     </div>
 
-    <div id="q3" class="hidden">
+    <div id="q3">
         <h3>3. 恒峰科技這8年的業績如何？</h3>
         <img src="image_2bf39b.png">
         <div class="options">
             <button onclick="check(3, 'A')">A. 持續上升</button>
             <button onclick="check(3, 'B')">B. 穩定</button>
-            </div>
+            <button onclick="check(3, 'C')">C. 持續下降</button>
+        </div>
     </div>
 
     <div id="final-screen" class="hidden">
@@ -79,11 +81,17 @@
     let currentScore = 0;
     const praises = ["太棒了！", "好聰明喔！", "完全正確！", "你真厲害！", "觀察力滿分！"];
 
+    // 隱藏不必要的題目，初始只顯示第一題
+    window.onload = function() {
+        document.getElementById('q2').classList.add('hidden');
+        document.getElementById('q3').classList.add('hidden');
+    };
+
     function check(qNum, userAns) {
         const msgArea = document.getElementById('praise-msg');
         let isCorrect = false;
 
-        // 正確答案邏輯
+        // 正確答案邏輯：1是A, 2是B, 3是B
         if (qNum === 1 && userAns === 'A') isCorrect = true;
         if (qNum === 2 && userAns === 'B') isCorrect = true;
         if (qNum === 3 && userAns === 'B') isCorrect = true;
@@ -94,7 +102,7 @@
             msgArea.innerText = "✅ " + praises[Math.floor(Math.random() * praises.length)];
             msgArea.style.color = "#27ae60";
 
-            // 鎖定所有按鈕，防止連續點擊
+            // 答對後鎖定當前題目的按鈕
             const buttons = document.querySelectorAll(`#q${qNum} button`);
             buttons.forEach(btn => btn.disabled = true);
 
