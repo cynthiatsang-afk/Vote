@@ -25,6 +25,7 @@
             color: white; 
             transition: 0.2s; 
             font-weight: bold;
+            text-align: center;
         }
         button:hover { background-color: #2980b9; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
@@ -45,8 +46,8 @@
         <img src="image_2bf095.jpg">
         <div class="options">
             <button onclick="check(1, 'A')">A. 持續上升</button>
-            <button onclick="check(1, 'B')">B</button>
-            <button onclick="check(1, 'C')">C</button>
+            <button onclick="check(1, 'B')">B. 持續下降</button>
+            <button onclick="check(1, 'C')">C. 持續下降</button>
         </div>
     </div>
 
@@ -54,13 +55,13 @@
         <h3>2. 哪幅圖的數據持續下降？</h3>
         <img src="image_2bf341.jpg">
         <div class="options">
-            <button onclick="check(2, 'A')">A</button>
+            <button onclick="check(2, 'A')">A. 持續上升</button>
             <button onclick="check(2, 'B')">B. 持續下降</button>
-            <button onclick="check(2, 'C')">C</button>
+            <button onclick="check(2, 'C')">C. 持續上升</button>
         </div>
     </div>
 
-    <div id="q3">
+    <div id="q3" class="hidden">
         <h3>3. 恒峰科技這8年的業績如何？</h3>
         <img src="image_2bf39b.png">
         <div class="options">
@@ -80,12 +81,6 @@
 <script>
     let currentScore = 0;
     const praises = ["太棒了！", "好聰明喔！", "完全正確！", "你真厲害！", "觀察力滿分！"];
-
-    // 隱藏不必要的題目，初始只顯示第一題
-    window.onload = function() {
-        document.getElementById('q2').classList.add('hidden');
-        document.getElementById('q3').classList.add('hidden');
-    };
 
     function check(qNum, userAns) {
         const msgArea = document.getElementById('praise-msg');
