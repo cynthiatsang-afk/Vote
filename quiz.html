@@ -11,11 +11,12 @@
         .praise-msg { height: 35px; font-size: 20px; font-weight: bold; margin: 15px 0; }
         img { width: 100%; border-radius: 10px; border: 1px solid #ddd; margin: 10px 0; }
         
+        /* 選項垂直排列 */
         .options { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         
         button { 
             padding: 15px; 
-            font-size: 18px; 
+            font-size: 20px; 
             border: none; 
             border-radius: 12px; 
             cursor: pointer; 
@@ -41,18 +42,18 @@
     <div id="q1">
         <img src="image_2bf095.jpg">
         <div class="options">
-            <button onclick="check(1, 'A')">A. 持續上升</button>
-            <button onclick="check(1, 'B')">B. 持續下降</button>
-            <button onclick="check(1, 'C')">C. 持續下降</button>
+            <button onclick="check(1, 'A')">A</button>
+            <button onclick="check(1, 'B')">B</button>
+            <button onclick="check(1, 'C')">C</button>
         </div>
     </div>
 
     <div id="q2" class="hidden">
         <img src="image_2bf341.jpg">
         <div class="options">
-            <button onclick="check(2, 'A')">A. 持續上升</button>
-            <button onclick="check(2, 'B')">B. 持續下降</button>
-            <button onclick="check(2, 'C')">C. 持續上升</button>
+            <button onclick="check(2, 'A')">A</button>
+            <button onclick="check(2, 'B')">B</button>
+            <button onclick="check(2, 'C')">C</button>
         </div>
     </div>
 
@@ -91,6 +92,7 @@
             msgArea.innerText = "✅ " + praises[Math.floor(Math.random() * praises.length)];
             msgArea.style.color = "#27ae60";
 
+            // 答對後鎖定當前按鈕
             const buttons = document.querySelectorAll(`#q${qNum} button`);
             buttons.forEach(btn => btn.disabled = true);
 
