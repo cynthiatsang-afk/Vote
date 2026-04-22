@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>折線圖小測試</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f7f9fc; text-align: center; padding: 20px; }
+        .quiz-container { background: white; max-width: 500px; margin: 0 auto; padding: 30px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        h2 { color: #333; }
+        .score-text { font-size: 18px; color: #f39c12; font-weight: bold; margin-bottom: 10px; }
+        .praise-msg { height: 30px; color: #27ae60; font-weight: bold; margin: 15px 0; }
+        img { width: 100%; border-radius: 10px; border: 1px solid #ddd; margin: 10px 0; }
+        .options { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        button { padding: 12px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; background-color: #3498db; color: white; transition: 0.2s; }
+        button:hover { background-color: #2980b9; }
+        .hidden { display: none; }
+        #final-screen { padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div class="score-text">⭐ 目前得分：<span id="score">0</span> / 3</div>
+    <div id="praise-msg" class="praise-msg">準備好了嗎？</div>
+
+    <div id="q1">
+        <h3>1. 哪幅圖的數據持續上升？</h3>
+        <img src="image_2bf095.jpg" alt="第1題圖">
+        <div class="options">
+            <button onclick="check(1, 'A')">A</button>
+            <button onclick="check(1, 'B')">B</button>
+            <button onclick="check(1, 'C')">C</button>
+        </div>
+    </div>
+
+    <div id="q2" class="hidden">
+        <h3>2. 哪幅圖的數據持續下降？</h3>
+        <img src="image_2bf341.jpg" alt="第2題圖">
+        <div class="options">
+            <button onclick="check(2, 'B')">B</button>
+            <button onclick="check(2, 'A')">A</button>
+            <button onclick="check(2, 'C')">C</button>
+        </div>
+    </div>
+
+    <div id="q3" class="hidden">
+        <h3>3. 恒峰科技這8年的業績如何？</h3>
+        <img src="image_2bf39b.png" alt="第3題圖">
+        <div class="options">
+            <button onclick="check(3, 'B')">B. 穩定</button>
+            <button onclick="check(3, 'A')">A. 持續上升</button>
+        </div>
+    </div>
+
+    <div id="final-screen" class="hidden">
+        <h2>🎉 太厲害了！</h2>
+        <p style="font-size: 24px;">你得到了滿分 3 分！</p>
+        <button onclick="location.reload()" style="background-color: #2ecc71;">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    let currentScore = 0;
+    const feedback = ["太棒了！", "好聰明喔！", "完全正確！", "你真厲害！"];
+
+    function check(qNum, userAns) {
+        const msgArea = document.getElementById('praise-msg');
+        let isCorrect = false;
+
+        // 判斷正確答案
+        if (qNum === 1 && userAns === 'A') isCorrect = true;
+        if (qNum === 2 && userAns === 'B') isCorrect = true;
+        if (qNum === 3 && userAns === 'B') isCorrect = true;
+
+        if (isCorrect) {
+            currentScore++;
+            document.getElementById('score').innerText = currentScore;
+            msgArea.innerText = "✅ " + feedback[Math.floor(Math.random() * feedback.length)];
+            msgArea.style.color = "#27ae60";
+
+            // 1秒後切換到下一題
+            setTimeout(() => {
+                document.getElementById('q' + qNum).classList.add('hidden');
+                msgArea.innerText = "";
+                if (qNum < 3) {
+                    document.getElementById('q' + (qNum + 1)).classList.remove('hidden');
+                } else {
+                    document.getElementById('final-screen').classList.remove('hidden');
+                    document.querySelector('.score-text').classList.add('hidden');
+                }
+            }, 1000);
+        } else {
+            msgArea.innerText = "❌ 差一點點，再看清楚圖片喔！";
+            msgArea.style.color = "#e74c3c";
+        }
+    }
+</script>
+
+</body>
+</html>
