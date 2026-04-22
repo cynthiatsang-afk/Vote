@@ -7,12 +7,10 @@
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f7f9fc; text-align: center; padding: 20px; }
         .quiz-container { background: white; max-width: 500px; margin: 0 auto; padding: 30px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        h2 { color: #333; }
         .score-text { font-size: 22px; color: #f39c12; font-weight: bold; margin-bottom: 10px; }
         .praise-msg { height: 35px; font-size: 20px; font-weight: bold; margin: 15px 0; }
         img { width: 100%; border-radius: 10px; border: 1px solid #ddd; margin: 10px 0; }
         
-        /* 確保按鈕由上而下垂直排列 */
         .options { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         
         button { 
@@ -25,7 +23,6 @@
             color: white; 
             transition: 0.2s; 
             font-weight: bold;
-            text-align: center;
         }
         button:hover { background-color: #2980b9; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
@@ -42,7 +39,6 @@
     <div id="praise-msg" class="praise-msg"></div>
 
     <div id="q1">
-        <h3>1. 哪幅圖的數據持續上升？</h3>
         <img src="image_2bf095.jpg">
         <div class="options">
             <button onclick="check(1, 'A')">A. 持續上升</button>
@@ -52,7 +48,6 @@
     </div>
 
     <div id="q2" class="hidden">
-        <h3>2. 哪幅圖的數據持續下降？</h3>
         <img src="image_2bf341.jpg">
         <div class="options">
             <button onclick="check(2, 'A')">A. 持續上升</button>
@@ -62,7 +57,6 @@
     </div>
 
     <div id="q3" class="hidden">
-        <h3>3. 恒峰科技這8年的業績如何？</h3>
         <img src="image_2bf39b.png">
         <div class="options">
             <button onclick="check(3, 'A')">A. 持續上升</button>
@@ -97,7 +91,6 @@
             msgArea.innerText = "✅ " + praises[Math.floor(Math.random() * praises.length)];
             msgArea.style.color = "#27ae60";
 
-            // 答對後鎖定當前題目的按鈕
             const buttons = document.querySelectorAll(`#q${qNum} button`);
             buttons.forEach(btn => btn.disabled = true);
 
