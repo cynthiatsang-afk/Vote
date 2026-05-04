@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>小六數學：兩步方程挑戰賽 (消去法)</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 600px; width: 100%; }
+        h2 { color: #2c3e50; text-align: center; }
+        .question-box { margin-bottom: 20px; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; }
+        .equation { font-size: 24px; text-align: center; margin: 20px 0; font-weight: bold; color: #e67e22; }
+        .fraction { display: inline-block; vertical-align: middle; text-align: center; }
+        .fraction span { display: block; padding: 0 5px; }
+        .fraction .n { border-bottom: 2px solid black; }
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 12px; cursor: pointer; border: 1px solid #3498db; background: white; border-radius: 5px; transition: 0.3s; }
+        button:hover { background: #3498db; color: white; }
+        .feedback { margin-top: 15px; font-weight: bold; text-align: center; min-height: 24px; }
+        .correct { color: #27ae60; }
+        .wrong { color: #c0392b; }
+        .progress { text-align: right; font-size: 0.9em; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="game-container">
+    <h2>兩步方程：消去法練習</h2>
+    <div class="progress" id="progress">第 1 / 6 題</div>
+    
+    <div class="question-box">
+        <div id="equation-display" class="equation"></div>
+        <p>請選擇正確的解題步驟（消去法）：</p>
+        <div class="options" id="options-container"></div>
+    </div>
+    
+    <div id="feedback" class="feedback"></div>
+</div>
+
+<script>
+    const questions = [
+        { eq: "2x + 10 = 30", display: "2x + 10 = 30", ans: "兩邊同時 - 10，再兩邊同時 ÷ 2", opts: ["兩邊同時 - 10，再兩邊同時 ÷ 2", "兩邊同時 + 10，再兩邊同時 ÷ 2", "兩邊同時 ÷ 2，再兩邊同時 - 10", "兩邊同時 - 10，再兩邊同時 × 2"] },
+        { eq: "x/5 - 6 = 4", display: "<div class='fraction'><span class='n'>x</span><span>5</span></div> - 6 = 4", ans: "兩邊同時 + 6，再兩邊同時 × 5", opts: ["兩邊同時 + 6，再兩邊同時 × 5", "兩邊同時 - 6，再兩邊同時 × 5", "兩邊同時 + 6，再兩邊同時 ÷ 5", "兩邊同時 × 5，再兩邊同時 + 6"] },
+        { eq: "3x - 15 = 45", display: "3x - 15 = 45", ans: "兩邊同時 + 15，再兩邊同時 ÷ 3", opts: ["兩邊同時 + 15，再兩邊同時 ÷ 3", "兩邊同時 - 15，再兩邊同時 ÷ 3", "兩邊同時 ÷ 3，再兩邊同時 + 15", "兩邊同時 + 15，再兩邊同時 × 3"] },
+        { eq: "x/10 + 7 = 12", display: "<div class='fraction'><span class='n'>x</span><span>10</span></div> + 7 = 12", ans: "兩邊同時 - 7，再兩邊同時 × 10", opts: ["兩邊同時 - 7，再兩邊同時 × 10", "兩邊同時 + 7，再兩邊同時 × 10", "兩邊同時 × 10，再兩邊同時 - 7", "兩邊同時 - 7，再兩邊同時 ÷ 10"] },
+        { eq: "4x + 20 = 100", display: "4x + 20 = 100", ans: "兩邊同時 - 20，再兩邊同時 ÷ 4", opts: ["兩邊同時 - 20，再兩邊同時 ÷ 4", "兩邊同時 + 20，再兩邊同時 ÷ 4", "兩邊同時 ÷ 4，再兩邊同時 - 20", "兩邊同時 - 20，再兩邊同時 × 4"] },
+        { eq: "x/4 - 5 = 20", display: "<div class='fraction'><span class='n'>x</span><span>4</span></div> - 5 = 20", ans: "兩邊同時 + 5，再兩邊同時 × 4", opts: ["兩邊同時 + 5，再兩邊同時 × 4", "兩邊同時 - 5，再兩邊同時 × 4", "兩邊同時 × 4，再兩邊同時 + 5", "兩邊同時 + 5，再兩邊同時 ÷ 4"] }
+    ];
+
+    let currentIdx = 0;
+
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById('progress').innerText = `第 ${currentIdx + 1} / 6 題`;
+        document.getElementById('equation-display').innerHTML = q.display;
+        document.getElementById('feedback').innerText = "";
+        
+        const optContainer = document.getElementById('options-container');
+        optContainer.innerHTML = "";
+        
+        // 打亂選項順序
+        let shuffled = [...q.opts].sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt, q.ans);
+            optContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, correct) {
+        const feedback = document.getElementById('feedback');
+        if (selected === correct) {
+            feedback.innerHTML = "<span class='correct'>正確！消去法運用得很好。</span>";
+            setTimeout(() => {
+                currentIdx++;
+                if (currentIdx < questions.length) {
+                    loadQuestion();
+                } else {
+                    document.getElementById('game-container').innerHTML = "<h2>🎉 恭喜完成！</h2><p style='text-align:center;'>你已經掌握了二步方程的消去法步驟。</p>";
+                }
+            }, 1500);
+        } else {
+            feedback.innerHTML = "<span class='wrong'>再想想看，要先消去加減項喔！</span>";
+        }
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
