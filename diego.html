@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六年級數學：二步方程小遊戲</title>
+<style>
+body { font-family: Arial, sans-serif; background-color: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+#game-container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 450px; text-align: center; }
+.equation-box { font-size: 24px; margin-bottom: 20px; color: #333; font-weight: bold; }
+.step-box { background: #e7f3ff; border-left: 5px solid #2196F3; padding: 10px; margin: 10px 0; text-align: left; font-size: 16px; min-height: 50px; }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+button { padding: 12px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background-color: #4caf50; color: white; transition: 0.3s; }
+button:hover { background-color: #45a049; }
+#message { margin-top: 20px; font-weight: bold; height: 20px; }
+.fraction { display: inline-block; vertical-align: middle; text-align: center; }
+.fraction span { display: block; padding: 0 2px; }
+.fraction .top { border-bottom: 1px solid black; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+<h2>二步方程挑戰</h2>
+<div id="progress">題目：1 / 6</div>
+<hr>
+<div class="equation-box" id="equation-display"></div>
+<div class="step-box" id="step-display">點選下方正確的運算步驟...</div>
+<div class="options" id="options-display"></div>
+<div id="message"></div>
+</div>
+
+<script>
+const questions = [
+{ q: "2x + 10 = 50", steps: ["2x = 50 - 10", "2x = 40", "x = 40 ÷ 2"], ans: "x = 20", opts: ["+ 10", "- 10", "× 2", "÷ 2"], correctOp: "- 10" },
+{ q: "3x - 15 = 45", steps: ["3x = 45 + 15", "3x = 60", "x = 60 ÷ 3"], ans: "x = 20", opts: ["+ 15", "- 15", "× 3", "÷ 3"], correctOp: "+ 15" },
+{ q: "x/5 + 8 = 18", steps: ["x/5 = 18 - 8", "x/5 = 10", "x = 10 × 5"], ans: "x = 50", opts: ["- 8", "+ 8", "× 5", "÷ 5"], correctOp: "- 8" },
+{ q: "4x + 12 = 32", steps: ["4x = 32 - 12", "4x = 20", "x = 20 ÷ 4"], ans: "x = 5", opts: ["- 12", "+ 12", "× 4", "÷ 4"], correctOp: "- 12" },
+{ q: "x/4 - 7 = 3", steps: ["x/4 = 3 + 7", "x/4 = 10", "x = 10 × 4"], ans: "x = 40", opts: ["+ 7", "- 7", "× 4", "÷ 4"], correctOp: "+ 7" },
+{ q: "5x - 25 = 75", steps: ["5x = 75 + 25", "5x = 100", "x = 100 ÷ 5"], ans: "x = 20", opts: ["+ 25", "- 25", "× 5", "÷ 5"], correctOp: "+ 25" }
+];
+
+let currentQ = 0;
+let currentStepIdx = 0;
+
+function renderQuestion() {
+const item = questions[currentQ];
+document.getElementById('progress').innerText = `題目：${currentQ + 1} / 6`;
+document.getElementById('message').innerText = "";
+
+// 處理除法顯示為分數
+let displayQ = item.q.replace(/x\/(\d+)/g, `<div class="fraction"><span class="top">x</span><span>$1</span></div>`);
+document.getElementById('equation-display').innerHTML = displayQ;
+document.getElementById('step-display').innerText = "第一步：兩邊應該同時...";
+
+const optsDiv = document.getElementById('options-display');
+optsDiv.innerHTML = "";
+item.opts.forEach(opt => {
+const btn = document.createElement('button');
+btn.innerText = opt;
+btn.onclick = () => checkAnswer(opt);
+optsDiv.appendChild(btn);
+});
+}
+
+function checkAnswer(opt) {
+const item = questions[currentQ];
+if (opt === item.correctOp) {
+document.getElementById('message').style.color = "green";
+document.getElementById('message').innerText = "正確！觀察消去法的過程：";
+
+// 顯示解題步驟
+let stepsHtml = item.steps.map(s => `<div>${s.replace(/\//g, ' ÷ ')}</div>`).join("");
+document.getElementById('step-display').innerHTML = stepsHtml + `<div style="color:red; font-weight:bold;">答案：${item.ans}</div>`;
+
+setTimeout(() => {
+if (currentQ < questions.length - 1) {
+currentQ++;
+renderQuestion();
+} else {
+document.getElementById('game-container').innerHTML = "<h2>恭喜完成！</h2><p>你已經成功解開了所有方程題目。</p>";
+}
+}, 3000);
+} else {
+document.getElementById('message').style.color = "red";
+document.getElementById('message').innerText = "再試試看，想一下如何消去常數？";
+}
+}
+
+renderQuestion();
+</script>
+
+</body>
+</html>
